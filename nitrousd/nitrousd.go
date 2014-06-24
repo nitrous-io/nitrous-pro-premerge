@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 
 	"bitbucket.org/kardianos/osext"
@@ -12,6 +13,8 @@ import (
 
 func main() {
 	logr := &logger.Logger{Level: logger.LogLevelDebug}
+	port := flag.Uint("p", 3000, "Port nitrousd will listen for requests")
+	flag.Parse()
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -23,7 +26,6 @@ func main() {
 
 	svr := server.NewServer(must.String(osext.ExecutableFolder()), logr)
 	host := "0.0.0.0"
-	port := uint16(3000)
-	logr.Infof("nitrousd (pid: %v) listening on %s:%d", pid, host, port)
-	svr.Start(host, port)
+	logr.Infof("nitrousd (pid: %v) listening on %s:%d", pid, host, *port)
+	svr.Start(host, uint16(*port))
 }
