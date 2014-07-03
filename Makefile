@@ -9,6 +9,10 @@ VERSION=$(BASE_VERSION)-$(REVISION)
 
 all: build
 
+image:
+	@docker build -t registry.nitrous.io/nitrous .
+.PHONY: image
+
 go:
 	@echo "$(OK_COLOR)==> Building revision $(VERSION)...$(NO_COLOR)"
 	@script/build-go
