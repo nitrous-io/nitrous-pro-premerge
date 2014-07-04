@@ -1,6 +1,7 @@
 package user_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/nitrous-io/nitrous/db"
@@ -36,6 +37,21 @@ var _ = Describe("models/user", func() {
 		if db != nil {
 			db.Close()
 		}
+	})
+
+	Describe("Encode as JSON", func() {
+		It("returns the JSON record", func() {
+			u, _ := user.FindByUsername(db, "foo")
+			d, _ := json.Marshal(u)
+			r := make(map[string]interface{})
+			json.Unmarshal(d, &r)
+			exposed := []string{"username", "email", "created_at", "updated_at"}
+			for _, p := range exposed {
+				Expect(r[p]).NotTo(BeNil(), "User JSON should contain %s", p)
+				delete(r, p)
+			}
+			Expect(r).To(BeEmpty(), "Exposed more than what we need %v", r)
+		})
 	})
 
 	Describe("FindByID()", func() {

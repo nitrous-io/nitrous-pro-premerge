@@ -18,7 +18,7 @@ var (
 	errInvalidCred = httperror.New(http.StatusBadRequest, "invalid_grant", "incorrect username or password")
 )
 
-func Post(c controllers.Helper, w http.ResponseWriter, r *http.Request) error {
+func Post(c controllers.Helper, w http.ResponseWriter, r *http.Request) (*controllers.JSONResponse, error) {
 	db := c.DB()
 
 	grantType := r.FormValue("grant_type")
@@ -26,42 +26,44 @@ func Post(c controllers.Helper, w http.ResponseWriter, r *http.Request) error {
 	password := r.FormValue("password")
 
 	if grantType != "password" {
-		return errGrantType
+		return nil, errGrantType
 	}
 
 	if username == "" {
-		return errUsername
+		return nil, errUsername
 	}
 
 	if password == "" {
-		return errPassword
+		return nil, errPassword
 	}
 
 	u, err := user.FindByUsername(db, username)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if u == nil {
-		return errInvalidCred
+		return nil, errInvalidCred
 	}
 
 	if !bcrypt.Verify(u.EncryptedPassword, password) {
-		return errInvalidCred
+		return nil, errInvalidCred
 	}
 
 	t := &token.Token{UserID: u.ID}
 
 	err = t.Insert(db)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Pragma", "no-cache")
 
-	c.RespondEncodeJSON(w, http.StatusOK, map[string]interface{}{
-		"access_token": t.Token,
-		"token_type":   "Bearer",
-	})
-	return nil
+	return &controllers.JSONResponse{
+		Code: http.StatusOK,
+		Data: map[string]interface{}{
+			"access_token": t.Token,
+			"token_type":   "Bearer",
+		},
+	}, nil
 }

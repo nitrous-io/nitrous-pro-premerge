@@ -8,11 +8,11 @@ import (
 
 func (s *Server) drawRoutes() {
 	s.route("/", s.action(home.Index), "GET")
-	s.route("/oauth/token", s.action(tokens.Post), "POST")
+	s.route("/oauth/token", s.publicJSON(tokens.Post), "POST")
 
 	s.namespace("/api/v0", func() {
 		s.route("/users", s.action(users.Create), "POST")
-		s.route("/user", s.authedAction(users.GetAuthenticatedUser), "GET")
+		s.route("/user", s.authenticated(s.privateJSON(users.GetAuthenticatedUser)), "GET")
 	})
 
 	s.static("/", "public") // catch-all, must come last

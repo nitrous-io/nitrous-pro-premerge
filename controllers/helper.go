@@ -16,5 +16,4 @@ type Helper interface {
 	RenderTemplate(w http.ResponseWriter, status int, tmpl *template.Template, data interface{})
 	RenderHTML(w http.ResponseWriter, status int, html []byte)
 	Respond(w http.ResponseWriter, status int, data []byte)
-	RespondEncodeJSON(w http.ResponseWriter, status int, data map[string]interface{})
 }
