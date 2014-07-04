@@ -12,7 +12,7 @@ func (s *Server) drawRoutes() {
 
 	s.namespace("/api/v0", func() {
 		s.route("/users", s.action(users.Create), "POST")
-		s.route("/user", s.authJSON(users.GetAuthenticatedUser), "GET")
+		s.route("/user", s.authenticated(s.privateJSON(users.GetAuthenticatedUser)), "GET")
 	})
 
 	s.static("/", "public") // catch-all, must come last

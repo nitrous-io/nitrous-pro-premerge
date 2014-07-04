@@ -53,6 +53,8 @@ func (s *Server) action(fn func(controllers.Helper, http.ResponseWriter, *http.R
 	}
 }
 
+// DEPRECATED, consider using `authenticated` middleware
+// FIXME: remove this once everything is migrated to use `authenticated`
 func (s *Server) authedAction(fn func(controllers.Helper, *user.User, http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
@@ -95,11 +97,16 @@ func (s *Server) authedAction(fn func(controllers.Helper, *user.User, http.Respo
 	}
 }
 
+type authenticatedHandler func(*user.User, http.ResponseWriter, *http.Request)
+
 type authJSONHandler func(controllers.Helper, *user.User, http.ResponseWriter, *http.Request) (*controllers.JSONResponse, error)
+
 type publicJSONHandler func(controllers.Helper, http.ResponseWriter, *http.Request) (*controllers.JSONResponse, error)
 
-// FIXME: fix duplication between this and the auth method above
-func (s *Server) authJSON(f authJSONHandler) http.HandlerFunc {
+// handle routes that requires authentication
+// When the user is authenticated `authenticatedHandler` will receive a
+// valid *user.User value
+func (s *Server) authenticated(f authenticatedHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		prefix := "Bearer "
@@ -134,6 +141,15 @@ func (s *Server) authJSON(f authJSONHandler) http.HandlerFunc {
 			return
 		}
 
+		f(u, w, r)
+	}
+}
+
+// connects the normal handle with the authentication middleware
+// This receives the user value from the middleware and pass it back to the
+// handle, while preserving the handler signatures
+func (s *Server) privateJSON(f authJSONHandler) authenticatedHandler {
+	return func(u *user.User, w http.ResponseWriter, r *http.Request) {
 		resp, err := f(s, u, w, r)
 		if err != nil {
 			s.handleError(w, err)
@@ -143,6 +159,7 @@ func (s *Server) authJSON(f authJSONHandler) http.HandlerFunc {
 	}
 }
 
+// handle JSON-emitted routes that dont require authentication
 func (s *Server) publicJSON(f publicJSONHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp, err := f(s, w, r)
