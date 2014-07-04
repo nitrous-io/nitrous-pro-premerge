@@ -62,14 +62,11 @@ func Create(c controllers.Helper, w http.ResponseWriter, r *http.Request) error 
 	return nil
 }
 
-func GetAuthenticatedUser(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.Request) error {
-	c.RespondEncodeJSON(w, http.StatusOK, map[string]interface{}{
-		"user": map[string]interface{}{
-			"username":   u.Username,
-			"email":      u.Email,
-			"created_at": u.CreatedAt,
-			"updated_at": u.UpdatedAt,
+func GetAuthenticatedUser(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.Request) (*controllers.JSONResponse, error) {
+	return &controllers.JSONResponse{
+		Code: http.StatusOK,
+		Data: map[string]interface{}{
+			"user": u,
 		},
-	})
-	return nil
+	}, nil
 }
