@@ -3,6 +3,7 @@ package host
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"regexp"
 	"time"
 
@@ -62,6 +63,19 @@ func findAllByUserID(db *db.Database, userID int64) ([]Host, error) {
 	return hosts, nil
 }
 
+func FindByUserAndName(db *db.Database, user *user.User, name string) (*Host, error) {
+	host := &Host{}
+	err := db.Get(host, "SELECT * from hosts WHERE user_id = $1 AND name = $2 ORDER BY id", user.ID, name)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return host, err
+}
+
 func (h *Host) Insert(d db.QueryReceiver) error {
 	if h.State == "" {
 		h.State = "born"
@@ -77,6 +91,23 @@ func (h *Host) Insert(d db.QueryReceiver) error {
 		return err
 	}
 	return nstmt.QueryRowx(h).StructScan(h)
+}
+
+func (h *Host) UpdateColumn(d db.QueryReceiver, column string) error {
+	q := fmt.Sprintf("UPDATE hosts SET %s = :state WHERE id = :id", column)
+	_, err := d.NamedExec(q, h)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (h *Host) Delete(d db.QueryReceiver) error {
+	_, err := d.NamedExec("DELETE FROM hosts WHERE id = :id", h)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (h *Host) Validate(db *db.Database) error {

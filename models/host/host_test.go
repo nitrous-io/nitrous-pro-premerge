@@ -116,6 +116,83 @@ var _ = Describe("models/host", func() {
 		})
 	})
 
+	Describe("FindByUserAndName()", func() {
+		var (
+			u   *user.User
+			err error
+		)
+
+		BeforeEach(func() {
+			u = &user.User{
+				Username: "foo",
+				Email:    "foo@example.com",
+				Password: "123456",
+			}
+			err = u.Insert(db)
+			Expect(err).To(BeNil())
+		})
+
+		Context("when there are multiple hosts for the given user and name", func() {
+			var (
+				h1 *host.Host
+				h2 *host.Host
+			)
+
+			BeforeEach(func() {
+				h1 = &host.Host{
+					Name:               "foo",
+					UserID:             u.ID,
+					RegionID:           r.ID,
+					PlanID:             p.ID,
+					ProviderTemplateID: pt.ID,
+					State:              "running",
+				}
+
+				err = h1.Insert(db)
+				Expect(err).To(BeNil())
+
+				h2 = &host.Host{
+					Name:               "bar",
+					UserID:             u.ID,
+					RegionID:           r.ID,
+					PlanID:             p.ID,
+					ProviderTemplateID: pt.ID,
+					State:              "stopped",
+				}
+				err = h2.Insert(db)
+				Expect(err).To(BeNil())
+			})
+
+			It("returns the host record mathces the name", func() {
+				h, err := host.FindByUserAndName(db, u, "foo")
+				Expect(err).To(BeNil())
+				Expect(h).NotTo(BeNil())
+				Expect(h.ID).To(Equal(h1.ID))
+				Expect(h.UserID).To(Equal(u.ID))
+				Expect(h.Name).To(Equal("foo"))
+				Expect(h.RegionID).To(Equal(r.ID))
+				Expect(h.State).To(Equal("running"))
+			})
+		})
+
+		Context("when a host record for the given user and name does not exist", func() {
+			It("returns nil without an error", func() {
+				h, err := host.FindByUserAndName(db, u, "foo")
+				Expect(err).To(BeNil())
+				Expect(h).To(BeNil())
+			})
+		})
+
+		Context("when some error happens", func() {
+			It("returns error", func() {
+				db.Close()
+				h, err := host.FindByUserAndName(db, u, "foo")
+				Expect(h).To(BeNil())
+				Expect(err).NotTo(BeNil())
+			})
+		})
+	})
+
 	Describe("Insert()", func() {
 		var (
 			h *host.Host
@@ -162,6 +239,83 @@ var _ = Describe("models/host", func() {
 
 		It("sets state to a default of 'born'", func() {
 			Expect(h.State).To(Equal("born"))
+		})
+	})
+
+	Describe("UpdateColumn()", func() {
+		var (
+			u   *user.User
+			h   *host.Host
+			err error
+		)
+
+		BeforeEach(func() {
+			u = &user.User{
+				Username: "foo",
+				Email:    "foo@example.com",
+				Password: "123456",
+			}
+			err = u.Insert(db)
+			Expect(err).To(BeNil())
+
+			h = &host.Host{
+				Name:               "foo",
+				UserID:             u.ID,
+				RegionID:           r.ID,
+				PlanID:             p.ID,
+				ProviderTemplateID: pt.ID,
+				State:              "running",
+			}
+
+			err = h.Insert(db)
+			Expect(err).To(BeNil())
+		})
+
+		It("updates the given column in host record", func() {
+			h.State = "stopped"
+			err := h.UpdateColumn(db, "state")
+
+			h1, err := host.FindByUserAndName(db, u, "foo")
+			Expect(err).To(BeNil())
+			Expect(h1.State).To(Equal("stopped"))
+		})
+	})
+
+	Describe("Delete()", func() {
+		var (
+			u   *user.User
+			h   *host.Host
+			err error
+		)
+
+		BeforeEach(func() {
+			u = &user.User{
+				Username: "foo",
+				Email:    "foo@example.com",
+				Password: "123456",
+			}
+			err = u.Insert(db)
+			Expect(err).To(BeNil())
+
+			h = &host.Host{
+				Name:               "foo",
+				UserID:             u.ID,
+				RegionID:           r.ID,
+				PlanID:             p.ID,
+				ProviderTemplateID: pt.ID,
+				State:              "running",
+			}
+
+			err = h.Insert(db)
+			Expect(err).To(BeNil())
+		})
+
+		It("deletes the host record", func() {
+			err := h.Delete(db)
+
+			h, err = host.FindByUserAndName(db, u, "foo")
+			Expect(err).To(BeNil())
+			Expect(h).To(BeNil())
 		})
 	})
 

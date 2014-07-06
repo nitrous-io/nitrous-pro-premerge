@@ -30,7 +30,8 @@ func Test(t *testing.T) {
 }
 
 func createMockHostbuilder() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/hosts", func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 
 		mustFail := os.Getenv("HOSTBUILDER_MUST_FAIL") // is there a better way?
@@ -44,12 +45,12 @@ func createMockHostbuilder() *httptest.Server {
 
 		m := struct {
 			Provider  string `json:"provider"`
-			Id        string `json:"id"`
-			IpAddress string `json:"ip_address"`
+			ID        string `json:"id"`
+			IPAddress string `json:"ip_address"`
 		}{
 			Provider:  provider,
-			Id:        "random_id",
-			IpAddress: "0.0.0.0",
+			ID:        "random_id",
+			IPAddress: "0.0.0.0",
 		}
 
 		payload, err := json.Marshal(m)
@@ -57,20 +58,72 @@ func createMockHostbuilder() *httptest.Server {
 			panic(err)
 		}
 
-		w.WriteHeader(201)
+		w.WriteHeader(http.StatusCreated)
+		w.Header().Set("Content-Type", "application/json")
 		w.Write(payload)
-	}))
+	})
+
+	mux.HandleFunc("/hosts/delete", func(w http.ResponseWriter, r *http.Request) {
+		mustFail := os.Getenv("HOSTBUILDER_MUST_FAIL") // is there a better way?
+		if mustFail != "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("some_error"))
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	})
+	mux.HandleFunc("/hosts/start", func(w http.ResponseWriter, r *http.Request) {
+		mustFail := os.Getenv("HOSTBUILDER_MUST_FAIL") // is there a better way?
+		if mustFail != "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("some_error"))
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	})
+	mux.HandleFunc("/hosts/stop", func(w http.ResponseWriter, r *http.Request) {
+		mustFail := os.Getenv("HOSTBUILDER_MUST_FAIL") // is there a better way?
+		if mustFail != "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("some_error"))
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	})
+	mux.HandleFunc("/hosts/restart", func(w http.ResponseWriter, r *http.Request) {
+		mustFail := os.Getenv("HOSTBUILDER_MUST_FAIL") // is there a better way?
+		if mustFail != "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("some_error"))
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	})
+	return httptest.NewServer(mux)
 }
 
 var _ = Describe("controllers/hosts", func() {
 	var (
-		db              *db.Database
-		svr             *server.Server
-		handler         *mux.Router
-		res             *httptest.ResponseRecorder
-		params          *url.Values
-		authTokenInputs AuthTokenInputs
-		mockHostbuilder *httptest.Server
+		db                    *db.Database
+		svr                   *server.Server
+		handler               *mux.Router
+		res                   *httptest.ResponseRecorder
+		params                *url.Values
+		authTokenInputs       AuthTokenInputs
+		mockHostbuilder       *httptest.Server
+		currentHostbuilderURL string
 	)
 
 	BeforeEach(func() {
@@ -84,6 +137,7 @@ var _ = Describe("controllers/hosts", func() {
 		authTokenInputs = AuthTokenInputs{Handler: handler}
 
 		mockHostbuilder = createMockHostbuilder()
+		currentHostbuilderURL = os.Getenv("HOSTBUILDER_URL")
 		os.Setenv("HOSTBUILDER_URL", mockHostbuilder.URL)
 	})
 
@@ -91,7 +145,7 @@ var _ = Describe("controllers/hosts", func() {
 		if db != nil {
 			db.Close()
 		}
-		os.Setenv("HOSTBUILDER_URL", "")
+		os.Setenv("HOSTBUILDER_URL", currentHostbuilderURL)
 		mockHostbuilder.Close()
 	})
 
@@ -404,6 +458,585 @@ var _ = Describe("controllers/hosts", func() {
 		Context("oauth token failure modes", func() {
 			BeforeEach(func() {
 				authTokenInputs.Path = "/api/v0/hosts"
+				authTokenInputs.Method = "POST"
+			})
+
+			ItRequiresAuthToken(&authTokenInputs)
+		})
+	})
+
+	Describe("DELETE /api/v0/hosts", func() {
+		var (
+			u  *user.User
+			t  *token.Token
+			r  *region.Region
+			p  *plan.Plan
+			pt *providertemplate.ProviderTemplate
+		)
+
+		doRequest := func(token string) {
+			req, err := NewRequest("DELETE", "/api/v0/hosts", params)
+			Expect(err).To(BeNil())
+			if token != "" {
+				req.Header.Set("Authorization", "Bearer "+token)
+			}
+			handler.ServeHTTP(res, req)
+		}
+
+		BeforeEach(func() {
+			u = &user.User{
+				Username: "foo",
+				Password: "123456",
+				Email:    "foo@example.com",
+			}
+			err := u.Insert(db)
+			Expect(err).To(BeNil())
+			Expect(u.ID).NotTo(BeZero())
+
+			t = &token.Token{
+				UserID: u.ID,
+				Token:  "tokenblackguy",
+			}
+			err = t.Insert(db)
+			Expect(err).To(BeNil())
+
+			r = &region.Region{Name: "apse1", Description: "Southeast Asia"}
+			err = r.Insert(db)
+			Expect(err).To(BeNil())
+
+			p = &plan.Plan{Name: "micro", MaxContainers: 1, Price: 500}
+			err = p.Insert(db)
+			Expect(err).To(BeNil())
+
+			pt = &providertemplate.ProviderTemplate{
+				RegionID: r.ID,
+				PlanID:   p.ID,
+				Name:     "digital-ocean-1",
+				Provider: "digitalocean",
+			}
+			err = pt.Insert(db)
+			Expect(err).To(BeNil())
+
+			h := &host.Host{
+				Name:               "honeybadger",
+				UserID:             u.ID,
+				RegionID:           r.ID,
+				PlanID:             p.ID,
+				ProviderTemplateID: pt.ID,
+			}
+			err = h.Insert(db)
+			Expect(err).To(BeNil())
+		})
+
+		Context("when a valid oauth token is given", func() {
+			Context("when request does not specify a name", func() {
+				It("responds with 400 bad request", func() {
+					params = &url.Values{}
+					params.Set("name", "")
+					doRequest("tokenblackguy")
+
+					Expect(res.Code).To(Equal(http.StatusBadRequest))
+					j := map[string]interface{}{}
+					err := json.Unmarshal(res.Body.Bytes(), &j)
+					Expect(err).To(BeNil())
+					Expect(j["error"]).To(Equal("invalid_request"))
+				})
+			})
+
+			Context("when an invalid host name given", func() {
+				It("responds with 400 bad request", func() {
+					params = &url.Values{}
+					params.Set("name", "dreamhost")
+					doRequest("tokenblackguy")
+
+					Expect(res.Code).To(Equal(http.StatusBadRequest))
+					j := map[string]interface{}{}
+					err := json.Unmarshal(res.Body.Bytes(), &j)
+					Expect(err).To(BeNil())
+					Expect(j["error"]).To(Equal("invalid_request"))
+				})
+			})
+
+			Context("when hostbuilder successfully deletes the host", func() {
+				BeforeEach(func() {
+					params = &url.Values{}
+					params.Set("name", "honeybadger")
+					doRequest("tokenblackguy")
+				})
+
+				It("deletes the host record", func() {
+					hosts, err := host.FindAllByUser(db, u)
+					Expect(err).To(BeNil())
+					Expect(len(hosts)).To(Equal(0))
+				})
+
+				It("responds with 200 OK", func() {
+					Expect(res.Code).To(Equal(http.StatusOK))
+				})
+			})
+
+			Context("when hostbuilder fails to delete the host", func() {
+				BeforeEach(func() {
+					os.Setenv("HOSTBUILDER_MUST_FAIL", "true")
+					params = &url.Values{}
+					params.Set("name", "honeybadger")
+					doRequest("tokenblackguy")
+				})
+
+				AfterEach(func() {
+					os.Setenv("HOSTBUILDER_MUST_FAIL", "")
+				})
+
+				It("does not delete the host record", func() {
+					hosts, err := host.FindAllByUser(db, u)
+					Expect(err).To(BeNil())
+					Expect(len(hosts)).To(Equal(1))
+				})
+
+				It("responds with 503 service unavailable", func() {
+					Expect(res.Code).To(Equal(http.StatusServiceUnavailable))
+				})
+			})
+		})
+
+		Context("oauth token failure modes", func() {
+			BeforeEach(func() {
+				authTokenInputs.Path = "/api/v0/hosts"
+				authTokenInputs.Method = "DELETE"
+			})
+
+			ItRequiresAuthToken(&authTokenInputs)
+		})
+	})
+
+	Describe("POST /api/v0/hosts/start", func() {
+		var (
+			u  *user.User
+			t  *token.Token
+			r  *region.Region
+			p  *plan.Plan
+			pt *providertemplate.ProviderTemplate
+		)
+
+		doRequest := func(token string) {
+			req, err := NewRequest("POST", "/api/v0/hosts/start", params)
+			Expect(err).To(BeNil())
+			if token != "" {
+				req.Header.Set("Authorization", "Bearer "+token)
+			}
+			handler.ServeHTTP(res, req)
+		}
+
+		BeforeEach(func() {
+			u = &user.User{
+				Username: "foo",
+				Password: "123456",
+				Email:    "foo@example.com",
+			}
+			err := u.Insert(db)
+			Expect(err).To(BeNil())
+			Expect(u.ID).NotTo(BeZero())
+
+			t = &token.Token{
+				UserID: u.ID,
+				Token:  "tokenblackguy",
+			}
+			err = t.Insert(db)
+			Expect(err).To(BeNil())
+
+			r = &region.Region{Name: "apse1", Description: "Southeast Asia"}
+			err = r.Insert(db)
+			Expect(err).To(BeNil())
+
+			p = &plan.Plan{Name: "micro", MaxContainers: 1, Price: 500}
+			err = p.Insert(db)
+			Expect(err).To(BeNil())
+
+			pt = &providertemplate.ProviderTemplate{
+				RegionID: r.ID,
+				PlanID:   p.ID,
+				Name:     "digital-ocean-1",
+				Provider: "digitalocean",
+			}
+			err = pt.Insert(db)
+			Expect(err).To(BeNil())
+
+			h := &host.Host{
+				Name:               "honeybadger",
+				UserID:             u.ID,
+				RegionID:           r.ID,
+				PlanID:             p.ID,
+				ProviderTemplateID: pt.ID,
+				State:              "stopped",
+			}
+			err = h.Insert(db)
+			Expect(err).To(BeNil())
+		})
+
+		Context("when a valid oauth token is given", func() {
+			Context("when request does not specify a name", func() {
+				It("responds with 400 bad request", func() {
+					params = &url.Values{}
+					params.Set("name", "")
+					doRequest("tokenblackguy")
+
+					Expect(res.Code).To(Equal(http.StatusBadRequest))
+					j := map[string]interface{}{}
+					err := json.Unmarshal(res.Body.Bytes(), &j)
+					Expect(err).To(BeNil())
+					Expect(j["error"]).To(Equal("invalid_request"))
+				})
+			})
+
+			Context("when an invalid host name given", func() {
+				It("responds with 400 bad request", func() {
+					params = &url.Values{}
+					params.Set("name", "dreamhost")
+					doRequest("tokenblackguy")
+
+					Expect(res.Code).To(Equal(http.StatusBadRequest))
+					j := map[string]interface{}{}
+					err := json.Unmarshal(res.Body.Bytes(), &j)
+					Expect(err).To(BeNil())
+					Expect(j["error"]).To(Equal("invalid_request"))
+				})
+			})
+
+			Context("when hostbuilder successfully starts the host", func() {
+				BeforeEach(func() {
+					params = &url.Values{}
+					params.Set("name", "honeybadger")
+					doRequest("tokenblackguy")
+				})
+
+				It("sets the host record's state to running", func() {
+					h, err := host.FindByUserAndName(db, u, "honeybadger")
+					Expect(err).To(BeNil())
+					Expect(h.State).To(Equal("running"))
+				})
+
+				It("responds with 200 OK", func() {
+					Expect(res.Code).To(Equal(http.StatusOK))
+				})
+			})
+
+			Context("when hostbuilder fails to start the host", func() {
+				BeforeEach(func() {
+					os.Setenv("HOSTBUILDER_MUST_FAIL", "true")
+					params = &url.Values{}
+					params.Set("name", "honeybadger")
+					doRequest("tokenblackguy")
+				})
+
+				AfterEach(func() {
+					os.Setenv("HOSTBUILDER_MUST_FAIL", "")
+				})
+
+				It("does not change state of the host record", func() {
+					h, err := host.FindByUserAndName(db, u, "honeybadger")
+					Expect(err).To(BeNil())
+					Expect(h.State).To(Equal("stopped"))
+				})
+
+				It("responds with 503 service unavailable", func() {
+					Expect(res.Code).To(Equal(http.StatusServiceUnavailable))
+				})
+			})
+		})
+
+		Context("oauth token failure modes", func() {
+			BeforeEach(func() {
+				authTokenInputs.Path = "/api/v0/hosts/start"
+				authTokenInputs.Method = "POST"
+			})
+
+			ItRequiresAuthToken(&authTokenInputs)
+		})
+	})
+
+	Describe("POST /api/v0/hosts/stop", func() {
+		var (
+			u  *user.User
+			t  *token.Token
+			r  *region.Region
+			p  *plan.Plan
+			pt *providertemplate.ProviderTemplate
+		)
+
+		doRequest := func(token string) {
+			req, err := NewRequest("POST", "/api/v0/hosts/stop", params)
+			Expect(err).To(BeNil())
+			if token != "" {
+				req.Header.Set("Authorization", "Bearer "+token)
+			}
+			handler.ServeHTTP(res, req)
+		}
+
+		BeforeEach(func() {
+			u = &user.User{
+				Username: "foo",
+				Password: "123456",
+				Email:    "foo@example.com",
+			}
+			err := u.Insert(db)
+			Expect(err).To(BeNil())
+			Expect(u.ID).NotTo(BeZero())
+
+			t = &token.Token{
+				UserID: u.ID,
+				Token:  "tokenblackguy",
+			}
+			err = t.Insert(db)
+			Expect(err).To(BeNil())
+
+			r = &region.Region{Name: "apse1", Description: "Southeast Asia"}
+			err = r.Insert(db)
+			Expect(err).To(BeNil())
+
+			p = &plan.Plan{Name: "micro", MaxContainers: 1, Price: 500}
+			err = p.Insert(db)
+			Expect(err).To(BeNil())
+
+			pt = &providertemplate.ProviderTemplate{
+				RegionID: r.ID,
+				PlanID:   p.ID,
+				Name:     "digital-ocean-1",
+				Provider: "digitalocean",
+			}
+			err = pt.Insert(db)
+			Expect(err).To(BeNil())
+
+			h := &host.Host{
+				Name:               "honeybadger",
+				UserID:             u.ID,
+				RegionID:           r.ID,
+				PlanID:             p.ID,
+				ProviderTemplateID: pt.ID,
+				State:              "running",
+			}
+			err = h.Insert(db)
+			Expect(err).To(BeNil())
+		})
+
+		Context("when a valid oauth token is given", func() {
+			Context("when request does not specify a name", func() {
+				It("responds with 400 bad request", func() {
+					params = &url.Values{}
+					params.Set("name", "")
+					doRequest("tokenblackguy")
+
+					Expect(res.Code).To(Equal(http.StatusBadRequest))
+					j := map[string]interface{}{}
+					err := json.Unmarshal(res.Body.Bytes(), &j)
+					Expect(err).To(BeNil())
+					Expect(j["error"]).To(Equal("invalid_request"))
+				})
+			})
+
+			Context("when an invalid host name given", func() {
+				It("responds with 400 bad request", func() {
+					params = &url.Values{}
+					params.Set("name", "dreamhost")
+					doRequest("tokenblackguy")
+
+					Expect(res.Code).To(Equal(http.StatusBadRequest))
+					j := map[string]interface{}{}
+					err := json.Unmarshal(res.Body.Bytes(), &j)
+					Expect(err).To(BeNil())
+					Expect(j["error"]).To(Equal("invalid_request"))
+				})
+			})
+
+			Context("when hostbuilder successfully stops the host", func() {
+				BeforeEach(func() {
+					params = &url.Values{}
+					params.Set("name", "honeybadger")
+					doRequest("tokenblackguy")
+				})
+
+				It("sets the host record state to stopped", func() {
+					h, err := host.FindByUserAndName(db, u, "honeybadger")
+					Expect(err).To(BeNil())
+					Expect(h.State).To(Equal("stopped"))
+				})
+
+				It("responds with 200 OK", func() {
+					Expect(res.Code).To(Equal(http.StatusOK))
+				})
+			})
+
+			Context("when hostbuilder fails to stop the host", func() {
+				BeforeEach(func() {
+					os.Setenv("HOSTBUILDER_MUST_FAIL", "true")
+					params = &url.Values{}
+					params.Set("name", "honeybadger")
+					doRequest("tokenblackguy")
+				})
+
+				AfterEach(func() {
+					os.Setenv("HOSTBUILDER_MUST_FAIL", "")
+				})
+
+				It("does not change state of the host record", func() {
+					h, err := host.FindByUserAndName(db, u, "honeybadger")
+					Expect(err).To(BeNil())
+					Expect(h.State).To(Equal("running"))
+				})
+
+				It("responds with 503 service unavailable", func() {
+					Expect(res.Code).To(Equal(http.StatusServiceUnavailable))
+				})
+			})
+		})
+
+		Context("oauth token failure modes", func() {
+			BeforeEach(func() {
+				authTokenInputs.Path = "/api/v0/hosts/stop"
+				authTokenInputs.Method = "POST"
+			})
+
+			ItRequiresAuthToken(&authTokenInputs)
+		})
+	})
+
+	Describe("POST /api/v0/hosts/restart", func() {
+		var (
+			u  *user.User
+			t  *token.Token
+			r  *region.Region
+			p  *plan.Plan
+			pt *providertemplate.ProviderTemplate
+		)
+
+		doRequest := func(token string) {
+			req, err := NewRequest("POST", "/api/v0/hosts/restart", params)
+			Expect(err).To(BeNil())
+			if token != "" {
+				req.Header.Set("Authorization", "Bearer "+token)
+			}
+			handler.ServeHTTP(res, req)
+		}
+
+		BeforeEach(func() {
+			u = &user.User{
+				Username: "foo",
+				Password: "123456",
+				Email:    "foo@example.com",
+			}
+			err := u.Insert(db)
+			Expect(err).To(BeNil())
+			Expect(u.ID).NotTo(BeZero())
+
+			t = &token.Token{
+				UserID: u.ID,
+				Token:  "tokenblackguy",
+			}
+			err = t.Insert(db)
+			Expect(err).To(BeNil())
+
+			r = &region.Region{Name: "apse1", Description: "Southeast Asia"}
+			err = r.Insert(db)
+			Expect(err).To(BeNil())
+
+			p = &plan.Plan{Name: "micro", MaxContainers: 1, Price: 500}
+			err = p.Insert(db)
+			Expect(err).To(BeNil())
+
+			pt = &providertemplate.ProviderTemplate{
+				RegionID: r.ID,
+				PlanID:   p.ID,
+				Name:     "digital-ocean-1",
+				Provider: "digitalocean",
+			}
+			err = pt.Insert(db)
+			Expect(err).To(BeNil())
+
+			h := &host.Host{
+				Name:               "honeybadger",
+				UserID:             u.ID,
+				RegionID:           r.ID,
+				PlanID:             p.ID,
+				ProviderTemplateID: pt.ID,
+				State:              "somestate",
+			}
+			err = h.Insert(db)
+			Expect(err).To(BeNil())
+		})
+
+		Context("when a valid oauth token is given", func() {
+			Context("when request does not specify a name", func() {
+				It("responds with 400 bad request", func() {
+					params = &url.Values{}
+					params.Set("name", "")
+					doRequest("tokenblackguy")
+
+					Expect(res.Code).To(Equal(http.StatusBadRequest))
+					j := map[string]interface{}{}
+					err := json.Unmarshal(res.Body.Bytes(), &j)
+					Expect(err).To(BeNil())
+					Expect(j["error"]).To(Equal("invalid_request"))
+				})
+			})
+
+			Context("when an invalid host name given", func() {
+				It("responds with 400 bad request", func() {
+					params = &url.Values{}
+					params.Set("name", "dreamhost")
+					doRequest("tokenblackguy")
+
+					Expect(res.Code).To(Equal(http.StatusBadRequest))
+					j := map[string]interface{}{}
+					err := json.Unmarshal(res.Body.Bytes(), &j)
+					Expect(err).To(BeNil())
+					Expect(j["error"]).To(Equal("invalid_request"))
+				})
+			})
+
+			Context("when hostbuilder successfully restarts the host", func() {
+				BeforeEach(func() {
+					params = &url.Values{}
+					params.Set("name", "honeybadger")
+					doRequest("tokenblackguy")
+				})
+
+				It("sets the host record state to running", func() {
+					h, err := host.FindByUserAndName(db, u, "honeybadger")
+					Expect(err).To(BeNil())
+					Expect(h.State).To(Equal("running"))
+				})
+
+				It("responds with 200 OK", func() {
+					Expect(res.Code).To(Equal(http.StatusOK))
+				})
+			})
+
+			Context("when hostbuilder fails to restart the host", func() {
+				BeforeEach(func() {
+					os.Setenv("HOSTBUILDER_MUST_FAIL", "true")
+					params = &url.Values{}
+					params.Set("name", "honeybadger")
+					doRequest("tokenblackguy")
+				})
+
+				AfterEach(func() {
+					os.Setenv("HOSTBUILDER_MUST_FAIL", "")
+				})
+
+				It("does not change state of the host record", func() {
+					h, err := host.FindByUserAndName(db, u, "honeybadger")
+					Expect(err).To(BeNil())
+					Expect(h.State).To(Equal("somestate"))
+				})
+
+				It("responds with 503 service unavailable", func() {
+					Expect(res.Code).To(Equal(http.StatusServiceUnavailable))
+				})
+			})
+		})
+
+		Context("oauth token failure modes", func() {
+			BeforeEach(func() {
+				authTokenInputs.Path = "/api/v0/hosts/restart"
 				authTokenInputs.Method = "POST"
 			})
 

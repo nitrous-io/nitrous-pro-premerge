@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/nitrous-io/nitrous/controllers"
 	"github.com/nitrous-io/nitrous/models/host"
@@ -22,8 +23,6 @@ import (
 )
 
 const hostbuilderURLEnvVar = "HOSTBUILDER_URL"
-
-var hostbuilderURL string
 
 func Index(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.Request) error {
 	db := c.DB()
@@ -56,7 +55,7 @@ func Create(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.R
 		return httperror.New(http.StatusBadRequest, "invalid_request", err.Error())
 	}
 	if pl == nil {
-		return httperror.New(http.StatusBadRequest, "invalid_request", "no matching plan for the given size")
+		return httperror.New(http.StatusBadRequest, "invalid_request", "no matching plan found for the given size")
 	}
 
 	if regionName == "" {
@@ -71,14 +70,14 @@ func Create(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.R
 	}
 
 	pts, err := providertemplate.FindAllByRegionAndPlan(db, pl.ID, rg.ID)
-	// TODO: Actual logic for picking the correct provider template
-	// pick the first template for now
 	if err != nil {
 		return httperror.New(http.StatusBadRequest, "invalid_request", err.Error())
 	}
 	if len(pts) == 0 {
-		return httperror.New(http.StatusBadRequest, "invalid_request", "no matching templates for the given plan and regions combination")
+		return httperror.New(http.StatusBadRequest, "invalid_request", "no matching templates found for the given plan and regions combination")
 	}
+	// TODO: Actual logic for picking the correct provider template
+	// pick the first template for now
 	pt := pts[0]
 
 	config := pt.Config.Map
@@ -88,7 +87,7 @@ func Create(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.R
 	config["name"] = sql.NullString{name, true}
 	config["public_keys"] = sql.NullString{"", true} //FIXME: pass actual public keys
 
-	info, err := createInHostbuilder(pt.Provider, config)
+	info, err := doInHostbuilder("create", pt.Provider, config)
 	if err != nil {
 		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
 	}
@@ -119,7 +118,60 @@ func Create(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.R
 	return nil
 }
 
-func createInHostbuilder(provider string, config map[string]sql.NullString) (map[string]string, error) {
+func HandleAction(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.Request) error {
+	db := c.DB()
+
+	p := strings.Split(r.URL.Path, "/")
+	action := p[len(p)-1]
+	if action == "hosts" {
+		action = "delete"
+	}
+
+	name := r.FormValue("name")
+	if name == "" {
+		return httperror.New(http.StatusBadRequest, "invalid_request", "host not provided")
+	}
+
+	ht, err := host.FindByUserAndName(db, u, name)
+	if err != nil {
+		return httperror.New(http.StatusBadRequest, "invalid_request", err.Error())
+	}
+	if ht == nil {
+		return httperror.New(http.StatusBadRequest, "invalid_request", "no matching host found for the given name")
+	}
+
+	pt, err := providertemplate.FindByID(db, ht.ProviderTemplateID)
+	if err != nil {
+		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
+	}
+
+	config := pt.Config.Map
+	if config == nil {
+		config = map[string]sql.NullString{}
+	}
+	config["name"] = sql.NullString{ht.Name, true}
+	config["public_keys"] = sql.NullString{"", true} //FIXME: pass actual public keys
+
+	_, err = doInHostbuilder(action, pt.Provider, config)
+	if err != nil {
+		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
+	}
+
+	switch action {
+	case "delete":
+		ht.Delete(db)
+	case "start", "restart":
+		ht.State = "running"
+		ht.UpdateColumn(db, "state")
+	case "stop":
+		ht.State = "stopped"
+		ht.UpdateColumn(db, "state")
+	}
+	c.RespondEncodeJSON(w, http.StatusOK, map[string]interface{}{})
+	return nil
+}
+
+func doInHostbuilder(action, provider string, config map[string]sql.NullString) (map[string]string, error) {
 	h := os.Getenv(hostbuilderURLEnvVar)
 	if h == "" {
 		panic(fmt.Sprintf("Hostbuilder URL is not set. export %s environment variable with a valid URL.", hostbuilderURLEnvVar))
@@ -130,28 +182,34 @@ func createInHostbuilder(provider string, config map[string]sql.NullString) (map
 		return nil, err
 	}
 
-	p := url.Values{}
-	p.Set("provider", provider)
-	p.Set("config", string(cg))
-
 	// FIXME: make this a global setting
 	v, _ := strconv.ParseBool(os.Getenv("NO_SSL_VERIFY"))
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: v},
 	}
-
 	client := &http.Client{Transport: tr}
-	url := fmt.Sprintf("%s/host", h)
+	urlParts := []string{h, "hosts", action}
+	successCode := http.StatusOK
+
+	if action == "create" {
+		urlParts = urlParts[:len(urlParts)-1]
+		successCode = http.StatusCreated
+	}
+
+	p := url.Values{}
+	p.Set("provider", provider)
+	p.Set("config", string(cg))
 
 	//TODO: probably we need to timeout the request,
-	//but leaving it out for the sake of simplicity.
+	//but leaving it out for now, for the sake of simplicity.
+	url := strings.Join(urlParts, "/")
 	response, err := client.PostForm(url, p)
 	if err != nil {
 		return nil, err
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode == 201 {
+	if response.StatusCode == successCode {
 		var m map[string]string
 		err = json.NewDecoder(response.Body).Decode(&m)
 		if err != nil {
