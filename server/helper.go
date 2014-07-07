@@ -8,6 +8,7 @@ import (
 	"text/template"
 
 	"github.com/nitrous-io/nitrous-common/logger"
+	"github.com/nitrous-io/nitrous/config"
 	"github.com/nitrous-io/nitrous/db"
 )
 
@@ -21,6 +22,10 @@ func (s *Server) Logger() *logger.Logger {
 
 func (s *Server) DB() *db.Database {
 	return s.db
+}
+
+func (s *Server) Env() *config.Env {
+	return s.env
 }
 
 func (s *Server) RenderTemplate(w http.ResponseWriter, status int, tmpl *template.Template, data interface{}) {
