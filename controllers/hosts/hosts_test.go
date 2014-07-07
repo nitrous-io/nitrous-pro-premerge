@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/nitrous-io/nitrous-common/logger"
+	"github.com/nitrous-io/nitrous/config"
 	"github.com/nitrous-io/nitrous/db"
 	"github.com/nitrous-io/nitrous/models/host"
 	"github.com/nitrous-io/nitrous/models/plan"
@@ -116,14 +117,13 @@ func createMockHostbuilder() *httptest.Server {
 
 var _ = Describe("controllers/hosts", func() {
 	var (
-		db                    *db.Database
-		svr                   *server.Server
-		handler               *mux.Router
-		res                   *httptest.ResponseRecorder
-		params                *url.Values
-		authTokenInputs       AuthTokenInputs
-		mockHostbuilder       *httptest.Server
-		currentHostbuilderURL string
+		db              *db.Database
+		svr             *server.Server
+		handler         *mux.Router
+		res             *httptest.ResponseRecorder
+		params          *url.Values
+		authTokenInputs AuthTokenInputs
+		mockHostbuilder *httptest.Server
 	)
 
 	BeforeEach(func() {
@@ -131,21 +131,18 @@ var _ = Describe("controllers/hosts", func() {
 		db, err = TestDatabase("nitrous_test")
 		Expect(err).To(BeNil())
 		logger := &logger.Logger{Level: logger.LogLevelQuiet}
-		svr = server.NewServer("", db, logger)
+		mockHostbuilder = createMockHostbuilder()
+		env := &config.Env{HostbuilderURL: mockHostbuilder.URL}
+		svr = server.NewServer("", db, logger, env)
 		handler = svr.Router()
 		res = httptest.NewRecorder()
 		authTokenInputs = AuthTokenInputs{Handler: handler}
-
-		mockHostbuilder = createMockHostbuilder()
-		currentHostbuilderURL = os.Getenv("HOSTBUILDER_URL")
-		os.Setenv("HOSTBUILDER_URL", mockHostbuilder.URL)
 	})
 
 	AfterEach(func() {
 		if db != nil {
 			db.Close()
 		}
-		os.Setenv("HOSTBUILDER_URL", currentHostbuilderURL)
 		mockHostbuilder.Close()
 	})
 

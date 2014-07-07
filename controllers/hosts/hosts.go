@@ -1,17 +1,9 @@
 package hosts
 
 import (
-	"crypto/tls"
 	"database/sql"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io/ioutil"
+
 	"net/http"
-	"net/url"
-	"os"
-	"strconv"
-	"strings"
 
 	"github.com/nitrous-io/nitrous/controllers"
 	"github.com/nitrous-io/nitrous/models/host"
@@ -19,10 +11,9 @@ import (
 	"github.com/nitrous-io/nitrous/models/providertemplate"
 	"github.com/nitrous-io/nitrous/models/region"
 	"github.com/nitrous-io/nitrous/models/user"
+	"github.com/nitrous-io/nitrous/pkg/hostbuilder"
 	"github.com/nitrous-io/nitrous/pkg/httperror"
 )
-
-const hostbuilderURLEnvVar = "HOSTBUILDER_URL"
 
 var (
 	ErrSizeRequired             = httperror.New(http.StatusBadRequest, "invalid_request", "host size not provided")
@@ -47,6 +38,7 @@ func Index(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.Re
 
 func Create(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.Request) error {
 	db := c.DB()
+	env := c.Env()
 
 	name := r.FormValue("name")
 	longname := r.FormValue("longname")
@@ -96,7 +88,8 @@ func Create(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.R
 	config["name"] = sql.NullString{name, true}
 	config["public_keys"] = sql.NullString{"", true} //FIXME: pass actual public keys
 
-	info, err := doInHostbuilder("create", pt.Provider, config)
+	hb := hostbuilder.NewHostbuilder(env.HostbuilderURL, pt.Provider, config)
+	info, err := hb.Create()
 	if err != nil {
 		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
 	}
@@ -130,14 +123,9 @@ func Create(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.R
 	return nil
 }
 
-func HandleAction(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.Request) error {
+func Delete(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.Request) error {
 	db := c.DB()
-
-	p := strings.Split(r.URL.Path, "/")
-	action := p[len(p)-1]
-	if action == "hosts" {
-		action = "delete"
-	}
+	env := c.Env()
 
 	name := r.FormValue("name")
 	if name == "" {
@@ -164,75 +152,152 @@ func HandleAction(c controllers.Helper, u *user.User, w http.ResponseWriter, r *
 	config["name"] = sql.NullString{ht.Name, true}
 	config["public_keys"] = sql.NullString{"", true} //FIXME: pass actual public keys
 
-	_, err = doInHostbuilder(action, pt.Provider, config)
+	hb := hostbuilder.NewHostbuilder(env.HostbuilderURL, pt.Provider, config)
+	_, err = hb.Delete()
 	if err != nil {
 		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
 	}
 
-	switch action {
-	case "delete":
-		ht.Delete(db)
-	case "start", "restart":
-		ht.State = "running"
-		ht.UpdateColumn(db, "state")
-	case "stop":
-		ht.State = "stopped"
-		ht.UpdateColumn(db, "state")
+	err = ht.Delete(db)
+	if err != nil {
+		return httperror.New(http.StatusInternalServerError, "internal_server_error", err.Error())
 	}
+
 	c.RespondEncodeJSON(w, http.StatusOK, map[string]interface{}{})
 	return nil
 }
 
-func doInHostbuilder(action, provider string, config map[string]sql.NullString) (map[string]string, error) {
-	h := os.Getenv(hostbuilderURLEnvVar)
-	if h == "" {
-		panic(fmt.Sprintf("Hostbuilder URL is not set. export %s environment variable with a valid URL.", hostbuilderURLEnvVar))
+func Start(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.Request) error {
+	db := c.DB()
+	env := c.Env()
+
+	name := r.FormValue("name")
+	if name == "" {
+		return ErrHostRequired
 	}
 
-	cg, err := json.Marshal(config)
+	ht, err := host.FindByUserAndName(db, u, name)
 	if err != nil {
-		return nil, err
+		return httperror.New(http.StatusBadRequest, "invalid_request", err.Error())
+	}
+	if ht == nil {
+		return ErrHostNotFound
 	}
 
-	// FIXME: make this a global setting
-	v, _ := strconv.ParseBool(os.Getenv("NO_SSL_VERIFY"))
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: v},
-	}
-	client := &http.Client{Transport: tr}
-	urlParts := []string{h, "hosts", action}
-	successCode := http.StatusOK
-
-	if action == "create" {
-		urlParts = urlParts[:len(urlParts)-1]
-		successCode = http.StatusCreated
-	}
-
-	p := url.Values{}
-	p.Set("provider", provider)
-	p.Set("config", string(cg))
-
-	//TODO: probably we need to timeout the request,
-	//but leaving it out for now, for the sake of simplicity.
-	url := strings.Join(urlParts, "/")
-	response, err := client.PostForm(url, p)
+	pt, err := providertemplate.FindByID(db, ht.ProviderTemplateID)
 	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode == successCode {
-		var m map[string]string
-		err = json.NewDecoder(response.Body).Decode(&m)
-		if err != nil {
-			return nil, err
-		}
-		return m, nil
+		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
 	}
 
-	e, err := ioutil.ReadAll(response.Body)
+	config := pt.Config.Map
+	if config == nil {
+		config = map[string]sql.NullString{}
+	}
+	config["name"] = sql.NullString{ht.Name, true}
+	config["public_keys"] = sql.NullString{"", true} //FIXME: pass actual public keys
+
+	hb := hostbuilder.NewHostbuilder(env.HostbuilderURL, pt.Provider, config)
+	_, err = hb.Start()
 	if err != nil {
-		return nil, err
+		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
 	}
-	return nil, errors.New(string(e))
+
+	ht.State = "running"
+	err = ht.UpdateColumn(db, "state")
+	if err != nil {
+		return httperror.New(http.StatusInternalServerError, "internal_server_error", err.Error())
+	}
+
+	c.RespondEncodeJSON(w, http.StatusOK, map[string]interface{}{})
+	return nil
+}
+
+func Stop(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.Request) error {
+	db := c.DB()
+	env := c.Env()
+
+	name := r.FormValue("name")
+	if name == "" {
+		return ErrHostRequired
+	}
+
+	ht, err := host.FindByUserAndName(db, u, name)
+	if err != nil {
+		return httperror.New(http.StatusBadRequest, "invalid_request", err.Error())
+	}
+	if ht == nil {
+		return ErrHostNotFound
+	}
+
+	pt, err := providertemplate.FindByID(db, ht.ProviderTemplateID)
+	if err != nil {
+		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
+	}
+
+	config := pt.Config.Map
+	if config == nil {
+		config = map[string]sql.NullString{}
+	}
+	config["name"] = sql.NullString{ht.Name, true}
+	config["public_keys"] = sql.NullString{"", true} //FIXME: pass actual public keys
+
+	hb := hostbuilder.NewHostbuilder(env.HostbuilderURL, pt.Provider, config)
+	_, err = hb.Stop()
+	if err != nil {
+		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
+	}
+
+	ht.State = "stopped"
+	err = ht.UpdateColumn(db, "state")
+	if err != nil {
+		return httperror.New(http.StatusInternalServerError, "internal_server_error", err.Error())
+	}
+
+	c.RespondEncodeJSON(w, http.StatusOK, map[string]interface{}{})
+	return nil
+}
+
+func Restart(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.Request) error {
+	db := c.DB()
+	env := c.Env()
+
+	name := r.FormValue("name")
+	if name == "" {
+		return ErrHostRequired
+	}
+
+	ht, err := host.FindByUserAndName(db, u, name)
+	if err != nil {
+		return httperror.New(http.StatusBadRequest, "invalid_request", err.Error())
+	}
+	if ht == nil {
+		return ErrHostNotFound
+	}
+
+	pt, err := providertemplate.FindByID(db, ht.ProviderTemplateID)
+	if err != nil {
+		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
+	}
+
+	config := pt.Config.Map
+	if config == nil {
+		config = map[string]sql.NullString{}
+	}
+	config["name"] = sql.NullString{ht.Name, true}
+	config["public_keys"] = sql.NullString{"", true} //FIXME: pass actual public keys
+
+	hb := hostbuilder.NewHostbuilder(env.HostbuilderURL, pt.Provider, config)
+	_, err = hb.Restart()
+	if err != nil {
+		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
+	}
+
+	ht.State = "running"
+	err = ht.UpdateColumn(db, "state")
+	if err != nil {
+		return httperror.New(http.StatusInternalServerError, "internal_server_error", err.Error())
+	}
+
+	c.RespondEncodeJSON(w, http.StatusOK, map[string]interface{}{})
+	return nil
 }
