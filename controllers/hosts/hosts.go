@@ -24,6 +24,15 @@ import (
 
 const hostbuilderURLEnvVar = "HOSTBUILDER_URL"
 
+var (
+	ErrSizeRequired             = httperror.New(http.StatusBadRequest, "invalid_request", "host size not provided")
+	ErrHostRequired             = httperror.New(http.StatusBadRequest, "invalid_request", "host not provided")
+	ErrPlanNotFound             = httperror.New(http.StatusBadRequest, "invalid_request", "no matching plan found for the given size")
+	ErrRegionNotFound           = httperror.New(http.StatusBadRequest, "invalid_request", "no matching region found for the given name")
+	ErrProvidertemplateNotFound = httperror.New(http.StatusBadRequest, "invalid_request", "no matching templates found for the given plan and regions combination")
+	ErrHostNotFound             = httperror.New(http.StatusBadRequest, "invalid_request", "no matching host found for the given name")
+)
+
 func Index(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.Request) error {
 	db := c.DB()
 	hosts, err := host.FindAllByUser(db, u)
@@ -47,7 +56,7 @@ func Create(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.R
 	// TODO: check if user account is eligible to create hosts (has a credit card on file)
 
 	if size == "" {
-		return httperror.New(http.StatusBadRequest, "invalid_request", "host size is required")
+		return ErrSizeRequired
 	}
 
 	pl, err := plan.FindByName(db, size)
@@ -55,7 +64,7 @@ func Create(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.R
 		return httperror.New(http.StatusBadRequest, "invalid_request", err.Error())
 	}
 	if pl == nil {
-		return httperror.New(http.StatusBadRequest, "invalid_request", "no matching plan found for the given size")
+		return ErrPlanNotFound
 	}
 
 	if regionName == "" {
@@ -66,7 +75,7 @@ func Create(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.R
 		return httperror.New(http.StatusBadRequest, "invalid_request", err.Error())
 	}
 	if rg == nil {
-		return httperror.New(http.StatusBadRequest, "invalid_request", "invalid region name")
+		return ErrRegionNotFound
 	}
 
 	pts, err := providertemplate.FindAllByRegionAndPlan(db, pl.ID, rg.ID)
@@ -74,7 +83,7 @@ func Create(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.R
 		return httperror.New(http.StatusBadRequest, "invalid_request", err.Error())
 	}
 	if len(pts) == 0 {
-		return httperror.New(http.StatusBadRequest, "invalid_request", "no matching templates found for the given plan and regions combination")
+		return ErrProvidertemplateNotFound
 	}
 	// TODO: Actual logic for picking the correct provider template
 	// pick the first template for now
@@ -129,7 +138,7 @@ func HandleAction(c controllers.Helper, u *user.User, w http.ResponseWriter, r *
 
 	name := r.FormValue("name")
 	if name == "" {
-		return httperror.New(http.StatusBadRequest, "invalid_request", "host not provided")
+		return ErrHostRequired
 	}
 
 	ht, err := host.FindByUserAndName(db, u, name)
@@ -137,7 +146,7 @@ func HandleAction(c controllers.Helper, u *user.User, w http.ResponseWriter, r *
 		return httperror.New(http.StatusBadRequest, "invalid_request", err.Error())
 	}
 	if ht == nil {
-		return httperror.New(http.StatusBadRequest, "invalid_request", "no matching host found for the given name")
+		return ErrHostNotFound
 	}
 
 	pt, err := providertemplate.FindByID(db, ht.ProviderTemplateID)
