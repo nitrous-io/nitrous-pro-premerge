@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+sudo docker run -a stdin -a stdout -i -t  \
+  -e "NITROUS_PG_URL=host=/var/run/postgresql user=root dbname=nitrous_development sslmode=disable" \
+  -p 3000:3000 \
+  registry.nitrous.io/nitrous \
+  sh -c "/etc/init.d/postgresql start && make run"

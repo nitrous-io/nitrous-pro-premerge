@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+sudo docker run registry.nitrous.io/nitrous \
+  sh -c "/etc/init.d/postgresql start && make test"

@@ -1,21 +1,24 @@
-From ubuntu:13.10
+From ubuntu:14.04
 MAINTAINER Nitrous.IO <eng@nitrous.io>
 
 RUN apt-get update && apt-get install -y \
   build-essential \
   curl \
   git \
-  mercurial
+  mercurial \
+  software-properties-common
 
 RUN locale-gen en_US.utf8
 
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ saucy-pgdg main" > /etc/apt/sources.list.d/pgdg.list
 RUN curl -s https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+RUN add-apt-repository ppa:chris-lea/node.js
 
 RUN apt-get update && apt-get install -y \
   postgresql-9.3 \
   postgresql-contrib-9.3 \
-  libpq-dev
+  libpq-dev \
+  nodejs
 
 RUN curl -s https://storage.googleapis.com/golang/go1.2.2.linux-amd64.tar.gz \
   | tar -v -C /usr/local -xz
@@ -41,14 +44,10 @@ RUN /etc/init.d/postgresql start &&\
 
 WORKDIR /opt/src/github.com/nitrous-io/nitrous
 # FIXME Remove this step when goop has support for private repos
-RUN echo "machine github.com login <token>" > $HOME/.netrc
+RUN echo "machine github.com login dafb8778c479cb08049cbca3bb27e4b59adaff26" > $HOME/.netrc
 RUN goop install
 
 RUN /etc/init.d/postgresql start &&\
     make createdb
 
 RUN cd rails && bundle install
-
-CMD /etc/init.d/postgresql start &&\
-    NITROUS_PG_URL="host=/var/run/postgresql user="$(whoami)" dbname=nitrous_development sslmode=disable"\
-    make
