@@ -119,7 +119,10 @@ func Create(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.R
 		ProviderIdentifier: sql.NullString{info["id"], true},
 		State:              "created",
 	}
-	h.Insert(db)
+	err = h.Insert(db)
+	if err != nil {
+		return httperror.New(http.StatusInternalServerError, "internal_server_error", err.Error())
+	}
 
 	c.RespondEncodeJSON(w, http.StatusCreated, map[string]interface{}{
 		"host": h,

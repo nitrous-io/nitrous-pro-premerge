@@ -397,7 +397,6 @@ var _ = Describe("controllers/hosts", func() {
 					params.Set("size", "micro")
 					params.Set("region", "apse1")
 					doRequest("tokenblackguy")
-
 				})
 
 				It("creates a host record for the user", func() {
