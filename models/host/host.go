@@ -65,7 +65,7 @@ func findAllByUserID(db *db.Database, userID int64) ([]Host, error) {
 
 func FindByUserAndName(db *db.Database, user *user.User, name string) (*Host, error) {
 	host := &Host{}
-	err := db.Get(host, "SELECT * from hosts WHERE user_id = $1 AND name = $2 ORDER BY id", user.ID, name)
+	err := db.Get(host, "SELECT * from hosts WHERE user_id = $1 AND name = $2", user.ID, name)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil

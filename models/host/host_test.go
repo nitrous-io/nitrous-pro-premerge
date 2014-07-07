@@ -163,7 +163,7 @@ var _ = Describe("models/host", func() {
 				Expect(err).To(BeNil())
 			})
 
-			It("returns the host record mathces the name", func() {
+			It("returns the host record matching the name", func() {
 				h, err := host.FindByUserAndName(db, u, "foo")
 				Expect(err).To(BeNil())
 				Expect(h).NotTo(BeNil())
@@ -274,6 +274,7 @@ var _ = Describe("models/host", func() {
 		It("updates the given column in host record", func() {
 			h.Name = "bar"
 			err := h.UpdateColumn(db, "name")
+			Expect(err).To(BeNil())
 
 			h1, err := host.FindByUserAndName(db, u, "bar")
 			Expect(err).To(BeNil())
@@ -312,6 +313,7 @@ var _ = Describe("models/host", func() {
 
 		It("deletes the host record", func() {
 			err := h.Delete(db)
+			Expect(err).To(BeNil())
 
 			h, err = host.FindByUserAndName(db, u, "foo")
 			Expect(err).To(BeNil())
