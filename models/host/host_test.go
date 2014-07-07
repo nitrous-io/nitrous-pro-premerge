@@ -272,12 +272,12 @@ var _ = Describe("models/host", func() {
 		})
 
 		It("updates the given column in host record", func() {
-			h.State = "stopped"
-			err := h.UpdateColumn(db, "state")
+			h.Name = "bar"
+			err := h.UpdateColumn(db, "name")
 
-			h1, err := host.FindByUserAndName(db, u, "foo")
+			h1, err := host.FindByUserAndName(db, u, "bar")
 			Expect(err).To(BeNil())
-			Expect(h1.State).To(Equal("stopped"))
+			Expect(h1.ID).To(Equal(h.ID))
 		})
 	})
 

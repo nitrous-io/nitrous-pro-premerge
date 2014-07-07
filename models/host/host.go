@@ -94,20 +94,14 @@ func (h *Host) Insert(d db.QueryReceiver) error {
 }
 
 func (h *Host) UpdateColumn(d db.QueryReceiver, column string) error {
-	q := fmt.Sprintf("UPDATE hosts SET %s = :state WHERE id = :id", column)
+	q := fmt.Sprintf("UPDATE hosts SET %s = :%s WHERE id = :id", column, column)
 	_, err := d.NamedExec(q, h)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (h *Host) Delete(d db.QueryReceiver) error {
 	_, err := d.NamedExec("DELETE FROM hosts WHERE id = :id", h)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (h *Host) Validate(db *db.Database) error {
