@@ -16,6 +16,11 @@ func (s *Server) drawRoutes() {
 		s.route("/user", s.authedAction(users.GetAuthenticatedUser), "GET")
 
 		s.route("/hosts", s.authedAction(hosts.Index), "GET")
+		s.route("/hosts", s.authedAction(hosts.Create), "POST")
+		s.route("/hosts", s.authedAction(hosts.Delete), "DELETE")
+		s.route("/hosts/start", s.authedAction(hosts.Start), "POST")
+		s.route("/hosts/stop", s.authedAction(hosts.Stop), "POST")
+		s.route("/hosts/restart", s.authedAction(hosts.Restart), "POST")
 	})
 
 	s.static("/", "public") // catch-all, must come last
