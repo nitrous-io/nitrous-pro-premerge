@@ -133,5 +133,21 @@ func init() {
 				ALTER TABLE hosts ADD COLUMN freighterd_port bigint;
 			`,
 		},
+		{
+			Version: "100",
+			Up: `
+				CREATE TABLE public_keys (
+					id bigserial PRIMARY KEY NOT NULL,
+					user_id bigint REFERENCES users(id) NOT NULL,
+					container_id character varying(255) REFERENCES containers(id) NOT NULL,
+					key text NOT NULL,
+					fingerprint character varying(255) NOT NULL,
+					created_at timestamp without time zone DEFAULT now(),
+					updated_at timestamp without time zone DEFAULT now()
+				);
+				CREATE INDEX index_public_keys_on_user_id ON public_keys USING btree (user_id);
+				CREATE UNIQUE INDEX index_public_keys_on_container_id_and_key ON public_keys USING btree (container_id, key);
+			`,
+		},
 	}
 }
