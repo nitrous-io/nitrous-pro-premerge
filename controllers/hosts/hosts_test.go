@@ -445,8 +445,8 @@ var _ = Describe("controllers/hosts", func() {
 					Expect(len(hosts)).To(Equal(0))
 				})
 
-				It("responds with 503 service unavailable", func() {
-					Expect(res.Code).To(Equal(http.StatusServiceUnavailable))
+				It("responds with 500 internal server error", func() {
+					Expect(res.Code).To(Equal(http.StatusInternalServerError))
 				})
 			})
 		})
@@ -589,8 +589,8 @@ var _ = Describe("controllers/hosts", func() {
 					Expect(len(hosts)).To(Equal(1))
 				})
 
-				It("responds with 503 service unavailable", func() {
-					Expect(res.Code).To(Equal(http.StatusServiceUnavailable))
+				It("responds with 500 internal server error", func() {
+					Expect(res.Code).To(Equal(http.StatusInternalServerError))
 				})
 			})
 		})
@@ -734,8 +734,8 @@ var _ = Describe("controllers/hosts", func() {
 					Expect(h.State).To(Equal("stopped"))
 				})
 
-				It("responds with 503 service unavailable", func() {
-					Expect(res.Code).To(Equal(http.StatusServiceUnavailable))
+				It("responds with 500 internal server error", func() {
+					Expect(res.Code).To(Equal(http.StatusInternalServerError))
 				})
 			})
 		})
@@ -879,8 +879,8 @@ var _ = Describe("controllers/hosts", func() {
 					Expect(h.State).To(Equal("running"))
 				})
 
-				It("responds with 503 service unavailable", func() {
-					Expect(res.Code).To(Equal(http.StatusServiceUnavailable))
+				It("responds with 500 internal server error", func() {
+					Expect(res.Code).To(Equal(http.StatusInternalServerError))
 				})
 			})
 		})
@@ -1024,8 +1024,8 @@ var _ = Describe("controllers/hosts", func() {
 					Expect(h.State).To(Equal("somestate"))
 				})
 
-				It("responds with 503 service unavailable", func() {
-					Expect(res.Code).To(Equal(http.StatusServiceUnavailable))
+				It("responds with 500 internal server error", func() {
+					Expect(res.Code).To(Equal(http.StatusInternalServerError))
 				})
 			})
 		})

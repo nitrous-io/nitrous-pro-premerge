@@ -40,31 +40,39 @@ func Create(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.R
 	db := c.DB()
 	env := c.Env()
 
-	name := r.FormValue("name")
-	longname := r.FormValue("longname")
 	size := r.FormValue("size")
-	regionName := r.FormValue("region")
-
-	// TODO: check if user account is eligible to create hosts (has a credit card on file)
-
 	if size == "" {
 		return ErrSizeRequired
 	}
 
+	name := r.FormValue("name")
+	if name == "" {
+		name = "double-rainbow" //FIXME: implement a random name generator
+	}
+
+	regionName := r.FormValue("region")
+	if regionName == "" {
+		regionName = "apse1" //FIXME: user model should specify a default region?
+	}
+
+	longname := r.FormValue("longname")
+	if longname == "" {
+		longname = name
+	}
+
+	// TODO: check if user account is eligible to create hosts (has a credit card on file)
+
 	pl, err := plan.FindByName(db, size)
 	if err != nil {
-		return httperror.New(http.StatusBadRequest, "invalid_request", err.Error())
+		return err
 	}
 	if pl == nil {
 		return ErrPlanNotFound
 	}
 
-	if regionName == "" {
-		regionName = "apse1" //FIXME: user model should specify a default region?
-	}
 	rg, err := region.FindByName(db, regionName)
 	if err != nil {
-		return httperror.New(http.StatusBadRequest, "invalid_request", err.Error())
+		return err
 	}
 	if rg == nil {
 		return ErrRegionNotFound
@@ -72,7 +80,7 @@ func Create(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.R
 
 	pts, err := providertemplate.FindAllByRegionAndPlan(db, pl.ID, rg.ID)
 	if err != nil {
-		return httperror.New(http.StatusBadRequest, "invalid_request", err.Error())
+		return err
 	}
 	if len(pts) == 0 {
 		return ErrProvidertemplateNotFound
@@ -91,11 +99,7 @@ func Create(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.R
 	hb := hostbuilder.NewHostbuilder(env.HostbuilderURL, pt.Provider, config)
 	info, err := hb.Create()
 	if err != nil {
-		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
-	}
-
-	if longname == "" {
-		longname = name
+		return err
 	}
 
 	h := &host.Host{
@@ -145,22 +149,18 @@ func Delete(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.R
 		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
 	}
 
-	config := pt.Config.Map
-	if config == nil {
-		config = map[string]sql.NullString{}
-	}
-	config["name"] = sql.NullString{ht.Name, true}
-	config["public_keys"] = sql.NullString{"", true} //FIXME: pass actual public keys
+	config := map[string]sql.NullString{}
+	config["id"] = ht.ProviderIdentifier
 
 	hb := hostbuilder.NewHostbuilder(env.HostbuilderURL, pt.Provider, config)
 	_, err = hb.Delete()
 	if err != nil {
-		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
+		return err
 	}
 
 	err = ht.Delete(db)
 	if err != nil {
-		return httperror.New(http.StatusInternalServerError, "internal_server_error", err.Error())
+		return err
 	}
 
 	c.RespondEncodeJSON(w, http.StatusOK, map[string]interface{}{})
@@ -189,23 +189,19 @@ func Start(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.Re
 		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
 	}
 
-	config := pt.Config.Map
-	if config == nil {
-		config = map[string]sql.NullString{}
-	}
-	config["name"] = sql.NullString{ht.Name, true}
-	config["public_keys"] = sql.NullString{"", true} //FIXME: pass actual public keys
+	config := map[string]sql.NullString{}
+	config["id"] = ht.ProviderIdentifier
 
 	hb := hostbuilder.NewHostbuilder(env.HostbuilderURL, pt.Provider, config)
 	_, err = hb.Start()
 	if err != nil {
-		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
+		return err
 	}
 
 	ht.State = "running"
 	err = ht.UpdateColumn(db, "state")
 	if err != nil {
-		return httperror.New(http.StatusInternalServerError, "internal_server_error", err.Error())
+		return err
 	}
 
 	c.RespondEncodeJSON(w, http.StatusOK, map[string]interface{}{})
@@ -234,23 +230,19 @@ func Stop(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.Req
 		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
 	}
 
-	config := pt.Config.Map
-	if config == nil {
-		config = map[string]sql.NullString{}
-	}
-	config["name"] = sql.NullString{ht.Name, true}
-	config["public_keys"] = sql.NullString{"", true} //FIXME: pass actual public keys
+	config := map[string]sql.NullString{}
+	config["id"] = ht.ProviderIdentifier
 
 	hb := hostbuilder.NewHostbuilder(env.HostbuilderURL, pt.Provider, config)
 	_, err = hb.Stop()
 	if err != nil {
-		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
+		return err
 	}
 
 	ht.State = "stopped"
 	err = ht.UpdateColumn(db, "state")
 	if err != nil {
-		return httperror.New(http.StatusInternalServerError, "internal_server_error", err.Error())
+		return err
 	}
 
 	c.RespondEncodeJSON(w, http.StatusOK, map[string]interface{}{})
@@ -279,23 +271,19 @@ func Restart(c controllers.Helper, u *user.User, w http.ResponseWriter, r *http.
 		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
 	}
 
-	config := pt.Config.Map
-	if config == nil {
-		config = map[string]sql.NullString{}
-	}
-	config["name"] = sql.NullString{ht.Name, true}
-	config["public_keys"] = sql.NullString{"", true} //FIXME: pass actual public keys
+	config := map[string]sql.NullString{}
+	config["id"] = ht.ProviderIdentifier
 
 	hb := hostbuilder.NewHostbuilder(env.HostbuilderURL, pt.Provider, config)
 	_, err = hb.Restart()
 	if err != nil {
-		return httperror.New(http.StatusServiceUnavailable, "service_unavailable", err.Error())
+		return err
 	}
 
 	ht.State = "running"
 	err = ht.UpdateColumn(db, "state")
 	if err != nil {
-		return httperror.New(http.StatusInternalServerError, "internal_server_error", err.Error())
+		return err
 	}
 
 	c.RespondEncodeJSON(w, http.StatusOK, map[string]interface{}{})

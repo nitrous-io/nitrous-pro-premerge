@@ -100,7 +100,7 @@ func (h *Host) UpdateColumn(d db.QueryReceiver, column string) error {
 }
 
 func (h *Host) Delete(d db.QueryReceiver) error {
-	_, err := d.NamedExec("DELETE FROM hosts WHERE id = :id", h)
+	_, err := d.Exec("DELETE FROM hosts WHERE id = $1", h.ID)
 	return err
 }
 
