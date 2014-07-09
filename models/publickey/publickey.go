@@ -16,13 +16,13 @@ var (
 )
 
 type PublicKey struct {
-	ID          int64      `db:"id"`
-	UserID      int64      `db:"user_id"`
-	ContainerID string     `db:"container_id"`
-	Fingerprint string     `db:"fingerprint"`
-	Key         string     `db:"key"`
-	CreatedAt   *time.Time `db:"created_at"`
-	UpdatedAt   *time.Time `db:"updated_at"`
+	ID          int64      `db:"id" json:"id"`
+	UserID      int64      `db:"user_id" json:"-"`
+	ContainerID string     `db:"container_id" json:"container_id"`
+	Fingerprint string     `db:"fingerprint" json:"fingerprint"`
+	Key         string     `db:"key" json:"key"`
+	CreatedAt   *time.Time `db:"created_at" json:"-"`
+	UpdatedAt   *time.Time `db:"updated_at" json:"-"`
 }
 
 func FindAllByUser(db *db.Database, user *user.User) ([]PublicKey, error) {
@@ -31,7 +31,16 @@ func FindAllByUser(db *db.Database, user *user.User) ([]PublicKey, error) {
 
 func FindAllByUserID(db *db.Database, userID int64) ([]PublicKey, error) {
 	keys := []PublicKey{}
-	err := db.Select(&keys, "SELECT * FROM public_keys WHERE user_id = $1", userID)
+	err := db.Select(&keys, "SELECT * FROM public_keys WHERE user_id = $1 ORDER BY (container_id, id)", userID)
+	if err != nil {
+		return []PublicKey{}, err
+	}
+	return keys, nil
+}
+
+func FindAllByUserIDAndContainerID(db *db.Database, userID int64, containerID string) ([]PublicKey, error) {
+	keys := []PublicKey{}
+	err := db.Select(&keys, "SELECT * FROM public_keys WHERE user_id = $1 AND container_id = $2 ORDER BY created_at", userID, containerID)
 	if err != nil {
 		return []PublicKey{}, err
 	}

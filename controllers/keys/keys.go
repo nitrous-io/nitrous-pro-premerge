@@ -25,20 +25,25 @@ func Index(env *middlewares.Env, c controllers.Helper, w http.ResponseWriter, r 
 	db := c.DB()
 	u := env.User
 
-	keys, err := publickey.FindAllByUser(db, u)
+	cid, err := getContainerID(db, r, u.ID, true)
 	if err != nil {
 		return err
 	}
 
-	ks := make([]string, 0, len(keys))
-	for _, k := range keys {
-		ks = append(ks, k.Key)
+	keys := []publickey.PublicKey{}
+	if cid == "" {
+		keys, err = publickey.FindAllByUser(db, u)
+	} else {
+		keys, err = publickey.FindAllByUserIDAndContainerID(db, u.ID, cid)
+	}
+	if err != nil {
+		return err
 	}
 
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
 		"status": "ok",
-		"keys":   ks,
+		"keys":   keys,
 	}
 	return nil
 }

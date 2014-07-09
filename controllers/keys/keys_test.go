@@ -47,8 +47,9 @@ var _ = Describe("controllers/keys", func() {
 
 	expectSuccessfulRequest := func(status string) map[string]interface{} {
 		j := map[string]interface{}{}
-		err := json.Unmarshal(res.Body.Bytes(), &j)
+		err := json.NewDecoder(res.Body).Decode(&j)
 		Expect(err).To(BeNil())
+		Expect(j["error_description"]).To(BeNil())
 		Expect(j["error"]).To(BeNil())
 		Expect(j["status"]).To(Equal(status))
 		return j
@@ -56,7 +57,7 @@ var _ = Describe("controllers/keys", func() {
 
 	expectBadRequest := func(errMsg string) map[string]interface{} {
 		j := map[string]interface{}{}
-		err := json.Unmarshal(res.Body.Bytes(), &j)
+		err := json.NewDecoder(res.Body).Decode(&j)
 		Expect(err).To(BeNil())
 		Expect(j["error_description"]).To(Equal(errMsg))
 		return j
@@ -108,24 +109,56 @@ var _ = Describe("controllers/keys", func() {
 			handler.ServeHTTP(res, req)
 		}
 
-		Context("when valid params are received", func() {
+		Context("when user has keys", func() {
+			var pks []*publickey.PublicKey
+
 			BeforeEach(func() {
+				for i := 0; i < 2; i++ {
+					pk := &publickey.PublicKey{
+						UserID:      hs.U.ID,
+						ContainerID: c.ID,
+						Key:         validKeys[i],
+					}
+					err := pk.Insert(db)
+					Expect(err).To(BeNil())
+					pks = append(pks, pk)
+				}
+
 				params = &url.Values{}
 				doRequest()
 			})
 
 			It("responds with ok", func() {
-				Expect(res.Code).To(Equal(http.StatusOK))
 				expectSuccessfulRequest("ok")
+				Expect(res.Code).To(Equal(http.StatusOK))
 			})
 
-			Context("when no keys are present for the user", func() {
-				It("returns empty array", func() {
-					j := expectSuccessfulRequest("ok")
-					Expect(j["keys"]).To(BeEmpty())
-				})
+			It("responds with json keys", func() {
+				j := struct {
+					Status string                `json:"status"`
+					Keys   []publickey.PublicKey `json:"keys"`
+				}{}
+				err := json.NewDecoder(res.Body).Decode(&j)
+				Expect(err).To(BeNil())
+				for i := 0; i < 2; i++ {
+					Expect(j.Keys[i].ID).To(Equal(pks[i].ID))
+					Expect(j.Keys[i].ContainerID).To(Equal(c.ID))
+					Expect(j.Keys[i].Key).To(Equal(pks[i].Key))
+					Expect(j.Keys[i].UserID).To(Equal(int64(0))) // UserID not marshalled
+				}
+			})
+		})
+
+		Context("when user has no keys", func() {
+			BeforeEach(func() {
+				params = &url.Values{}
+				doRequest()
 			})
 
+			It("returns empty array", func() {
+				j := expectSuccessfulRequest("ok")
+				Expect(j["keys"]).To(BeEmpty())
+			})
 		})
 	})
 
