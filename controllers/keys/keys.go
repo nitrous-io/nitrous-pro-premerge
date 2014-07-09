@@ -113,7 +113,16 @@ func DeleteByFingerprint(env *middlewares.Env, c controllers.Helper, w http.Resp
 	u := env.User
 
 	fingerprint := mux.Vars(r)["md5_fingerprint"]
-	err := publickey.DestroyByUserIDAndFingerprint(db, u.ID, fingerprint)
+	cid, err := getContainerID(db, r, u.ID, true)
+	if err != nil {
+		return err
+	}
+
+	if cid == "" {
+		err = publickey.DestroyByUserIDAndFingerprint(db, u.ID, fingerprint)
+	} else {
+		err = publickey.DestroyByUserIDAndContainerIDAndFingerprint(db, u.ID, cid, fingerprint)
+	}
 	if err != nil {
 		if err == publickey.ErrNotFound {
 			return ErrFingerprintNotFound

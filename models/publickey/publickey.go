@@ -59,6 +59,22 @@ func DestroyByUserIDAndFingerprint(db *db.Database, userID int64, fingerprint st
 	return err
 }
 
+func DestroyByUserIDAndContainerIDAndFingerprint(db *db.Database, userID int64, containerID string, fingerprint string) error {
+	keys := []PublicKey{}
+	sqlf := "%s FROM public_keys WHERE user_id = $1 AND container_id = $2 AND fingerprint = $3"
+	err := db.Select(&keys, fmt.Sprintf(sqlf, "SELECT *"), userID, containerID, fingerprint)
+
+	if err != nil {
+		return err
+	}
+	if len(keys) == 0 {
+		return ErrNotFound
+	}
+
+	_, err = db.Queryx(fmt.Sprintf(sqlf, "DELETE"), userID, containerID, fingerprint)
+	return err
+}
+
 func FindAllByContainerID(db *db.Database, containerID string) ([]PublicKey, error) {
 	keys := []PublicKey{}
 	err := db.Select(&keys, "SELECT * FROM public_keys WHERE container_id = $1", containerID)

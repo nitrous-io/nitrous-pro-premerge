@@ -312,5 +312,36 @@ var _ = Describe("controllers/keys", func() {
 				Expect(upks).To(HaveLen(len(pks)))
 			})
 		})
+
+		Context("when container is specified", func() {
+			var c2 *container.Container
+			var fprint string
+
+			BeforeEach(func() {
+				c2 = &container.Container{
+					ID:     "a1b2",
+					UserID: hs.U.ID,
+					HostID: hs.H.ID,
+					Image:  "nitrous-base",
+					Name:   "go-benchmark",
+				}
+				err := c2.Insert(db)
+				Expect(err).To(BeNil())
+				fprint, err = pks[1].Md5Fingerprint()
+				Expect(err).To(BeNil())
+			})
+
+			It("is successful when key is present in container", func() {
+				params = &url.Values{"container_id": {c.ID}}
+				doRequest(fprint)
+				expectSuccessfulRequest("ok")
+			})
+
+			It("is unsuccessful when key is not in container", func() {
+				params = &url.Values{"container_id": {c2.ID}}
+				doRequest(fprint)
+				expectBadRequest("fingerprint not found")
+			})
+		})
 	})
 })
