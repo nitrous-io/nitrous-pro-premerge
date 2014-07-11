@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -29,7 +31,7 @@ var SharedHTTPClient = &http.Client{
 // Client represents a Freighter API consumer.
 type Client interface {
 	List(*Host) ([]*Container, error)
-	// Create()
+	Create(host *Host, name, image string) (*Container, error)
 	// Info()
 	// Start()
 	// Stop()
@@ -54,6 +56,10 @@ type (
 	containersResponse struct {
 		Containers []*Container `json:"containers"`
 	}
+
+	errorResponse struct {
+		Error string `json:error`
+	}
 )
 
 type RequestFailedError struct {
@@ -64,6 +70,14 @@ type RequestFailedError struct {
 func (e RequestFailedError) Error() string {
 	return fmt.Sprintf("freighter: request %s %s failed: %s",
 		e.Req.Method, e.Req.URL.String(), e.Err.Error())
+}
+
+type InvalidParamError struct {
+	Msg string
+}
+
+func (e InvalidParamError) Error() string {
+	return fmt.Sprintf("freighter: invalid param: %s", e.Msg)
 }
 
 type StatusError struct {
@@ -93,8 +107,8 @@ func NewClient(httpclient *http.Client) Client {
 // List makes an API request to a given Freighter Host and returns a list of
 // Containers.
 func (c *client) List(h *Host) ([]*Container, error) {
-	url := h.BaseURL() + "/containers"
-	req, err := http.NewRequest("GET", url, nil)
+	u := h.BaseURL() + "/containers"
+	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -108,12 +122,54 @@ func (c *client) List(h *Host) ([]*Container, error) {
 		return nil, &StatusError{resp.StatusCode}
 	}
 
-	var containers containersResponse
-	err = json.NewDecoder(resp.Body).Decode(&containers)
+	var cntnrs containersResponse
+	err = json.NewDecoder(resp.Body).Decode(&cntnrs)
 	resp.Body.Close()
 	if err != nil {
 		return nil, ResponseError
 	}
 
-	return containers.Containers, nil
+	return cntnrs.Containers, nil
+}
+
+// Create makes an API request to a given Freighter Host to create a container
+// with the given name and image.
+func (c *client) Create(h *Host, name, image string) (*Container, error) {
+	u := h.BaseURL() + "/containers"
+	data := url.Values{}
+	data.Set("name", name)
+	data.Set("image", image)
+	req, err := http.NewRequest("POST", u, strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, &RequestFailedError{Req: req, Err: err}
+	}
+	switch resp.StatusCode {
+	case http.StatusOK:
+		// Success, do nothing.
+	case 422:
+		var errResp errorResponse
+		err = json.NewDecoder(resp.Body).Decode(&errResp)
+		resp.Body.Close()
+		if err != nil {
+			return nil, ResponseError
+		}
+		return nil, &InvalidParamError{errResp.Error}
+	default:
+		return nil, &StatusError{resp.StatusCode}
+	}
+
+	var cntnr containerResponse
+	err = json.NewDecoder(resp.Body).Decode(&cntnr)
+	resp.Body.Close()
+	if err != nil {
+		return nil, ResponseError
+	}
+
+	return cntnr.Container, nil
 }

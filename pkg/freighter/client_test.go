@@ -26,6 +26,15 @@ var _ = Describe("freighter/client", func() {
 		})
 	})
 
+	IPAndPort := func(s *ghttp.Server) (string, int) {
+		serverAddr := s.HTTPTestServer.Listener.Addr().String()
+		ip, portStr, err := net.SplitHostPort(serverAddr)
+		Expect(err).To(BeNil())
+		port, err := strconv.Atoi(portStr)
+		Expect(err).To(BeNil())
+		return ip, port
+	}
+
 	Describe("List()", func() {
 		var (
 			client freighter.Client
@@ -37,19 +46,10 @@ var _ = Describe("freighter/client", func() {
 			responseBody string
 		)
 
-		IPAndPort := func(s *ghttp.Server) (string, int) {
-			serverAddr := s.HTTPTestServer.Listener.Addr().String()
-			ip, portStr, err := net.SplitHostPort(serverAddr)
-			Expect(err).To(BeNil())
-			port, err := strconv.Atoi(portStr)
-			Expect(err).To(BeNil())
-			return ip, port
-		}
-
 		BeforeEach(func() {
 			handlers = ghttp.CombineHandlers(
 				ghttp.VerifyRequest("GET", "/containers"),
-				ghttp.VerifyHeaderKV("Content-Type", "application/json"),
+				ghttp.VerifyContentType("application/json"),
 				ghttp.RespondWithPtr(&statusCode, &responseBody),
 			)
 
@@ -240,6 +240,149 @@ var _ = Describe("freighter/client", func() {
 					Expect(containers[0].SSHPort).To(Equal(60001))
 					Expect(containers[0].State).To(Equal("running"))
 				})
+			})
+		})
+	})
+
+	Describe("Create()", func() {
+		var (
+			client freighter.Client
+			host   *freighter.Host
+
+			server       *ghttp.Server
+			handlers     http.HandlerFunc
+			statusCode   int
+			responseBody string
+		)
+
+		BeforeEach(func() {
+			handlers = ghttp.CombineHandlers(
+				func(w http.ResponseWriter, req *http.Request) {
+					// Call ParseForm() so that server.ReceivedRequests() have
+					// POST params populated.
+					err := req.ParseForm()
+					Expect(err).To(BeNil())
+				},
+				ghttp.VerifyRequest("POST", "/containers"),
+				ghttp.VerifyContentType("application/x-www-form-urlencoded"),
+				ghttp.RespondWithPtr(&statusCode, &responseBody),
+			)
+
+			server = ghttp.NewServer()
+			server.AppendHandlers(handlers)
+
+			ip, port := IPAndPort(server)
+			host = &freighter.Host{IP: ip, Port: port, Secure: false}
+			client = freighter.NewClient(nil)
+		})
+
+		AfterEach(func() {
+			if server.HTTPTestServer != nil {
+				server.Close()
+			}
+		})
+
+		Context("when the response is HTTP 200 OK", func() {
+			BeforeEach(func() {
+				statusCode = http.StatusOK
+			})
+
+			Context("when the response has a container", func() {
+				BeforeEach(func() {
+					responseBody = `{
+						"container": {
+							"id":"cafebabe",
+							"name":"yosemite",
+							"image":"ubuntu",
+							"host":"172.17.0.1",
+							"ssh_port":60001,
+							"state":"running"
+						}
+					}`
+				})
+
+				It("returns the Container", func() {
+					container, err := client.Create(host, "yosemite", "ubuntu")
+					Expect(err).To(BeNil())
+					Expect(container).NotTo(BeNil())
+
+					receivedRequests := server.ReceivedRequests()
+					Expect(receivedRequests).To(HaveLen(1))
+					Expect(receivedRequests[0].PostFormValue("name")).To(Equal("yosemite"))
+					Expect(receivedRequests[0].PostFormValue("image")).To(Equal("ubuntu"))
+
+					Expect(container.ID).To(Equal("cafebabe"))
+					Expect(container.Name).To(Equal("yosemite"))
+					Expect(container.Image).To(Equal("ubuntu"))
+					Expect(container.Host).To(Equal("172.17.0.1"))
+					Expect(container.SSHPort).To(Equal(60001))
+					Expect(container.State).To(Equal("running"))
+				})
+			})
+
+			Context("when the response is empty", func() {
+				BeforeEach(func() {
+					responseBody = ``
+				})
+
+				It("returns ResponseError", func() {
+					container, err := client.Create(host, "yosemite", "ubuntu")
+					Expect(err).NotTo(BeNil())
+					Expect(err).To(Equal(freighter.ResponseError))
+					Expect(server.ReceivedRequests()).To(HaveLen(1))
+					Expect(container).To(BeNil())
+				})
+			})
+		})
+
+		Context("when the response is not HTTP 422 Unprocessible Entity", func() {
+			BeforeEach(func() {
+				statusCode = 422
+			})
+
+			Context("when the response body is JSON with an 'error' key", func() {
+				BeforeEach(func() {
+					responseBody = `{ "error": "invalid name" }`
+				})
+
+				It("returns InvalidParamError", func() {
+					container, err := client.Create(host, "yosemite", "ubuntu")
+					Expect(err).NotTo(BeNil())
+					e, ok := err.(*freighter.InvalidParamError)
+					Expect(ok).To(BeTrue())
+					Expect(e.Msg).To(Equal("invalid name"))
+					Expect(server.ReceivedRequests()).To(HaveLen(1))
+					Expect(container).To(BeNil())
+				})
+			})
+
+			Context("when the response body is not JSON", func() {
+				BeforeEach(func() {
+					responseBody = `error: "not really JSON"`
+				})
+
+				It("returns ResponseError", func() {
+					container, err := client.Create(host, "yosemite", "ubuntu")
+					Expect(err).NotTo(BeNil())
+					Expect(err).To(Equal(freighter.ResponseError))
+					Expect(server.ReceivedRequests()).To(HaveLen(1))
+					Expect(container).To(BeNil())
+				})
+			})
+		})
+
+		Context("when the response is not HTTP 200 OK nor HTTP 422 Unprocessible Entity", func() {
+			BeforeEach(func() {
+				statusCode = http.StatusInternalServerError
+			})
+
+			It("returns a StatusError", func() {
+				container, err := client.Create(host, "yosemite", "ubuntu")
+				Expect(err).NotTo(BeNil())
+				_, ok := err.(*freighter.StatusError)
+				Expect(ok).To(BeTrue())
+				Expect(server.ReceivedRequests()).To(HaveLen(1))
+				Expect(container).To(BeNil())
 			})
 		})
 	})
