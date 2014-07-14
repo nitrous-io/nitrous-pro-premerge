@@ -400,6 +400,7 @@ var _ = Describe("freighter/client", func() {
 
 		BeforeEach(func() {
 			handlers = ghttp.CombineHandlers(
+				ghttp.VerifyRequest("GET", "/containers/deadbeef"),
 				ghttp.VerifyContentType("application/json"),
 				ghttp.RespondWithPtr(&statusCode, &responseBody),
 			)
@@ -441,10 +442,7 @@ var _ = Describe("freighter/client", func() {
 					container, err := client.Info(host, "deadbeef")
 					Expect(err).To(BeNil())
 					Expect(container).NotTo(BeNil())
-
-					receivedRequests := server.ReceivedRequests()
-					Expect(receivedRequests).To(HaveLen(1))
-					Expect(receivedRequests[0].URL.Path).To(Equal("/containers/deadbeef"))
+					Expect(server.ReceivedRequests()).To(HaveLen(1))
 
 					Expect(container.ID).To(Equal("deadbeef"))
 					Expect(container.Name).To(Equal("mavericks"))
@@ -495,6 +493,151 @@ var _ = Describe("freighter/client", func() {
 				Expect(server.ReceivedRequests()).To(HaveLen(1))
 				Expect(container).To(BeNil())
 			})
+		})
+	})
+
+	Describe("container control actions", func() {
+		var (
+			fnUnderTest func(h *freighter.Host, id string) (*freighter.Container, error)
+			path        string
+
+			client freighter.Client
+			host   *freighter.Host
+
+			server       *ghttp.Server
+			handlers     http.HandlerFunc
+			statusCode   int
+			responseBody string
+
+			id = "facecafe"
+		)
+
+		BeforeEach(func() {
+			handlers = ghttp.CombineHandlers(
+				ghttp.VerifyContentType("application/x-www-form-urlencoded"),
+				ghttp.RespondWithPtr(&statusCode, &responseBody),
+			)
+
+			server = ghttp.NewServer()
+			server.AppendHandlers(handlers)
+
+			ip, port := IPAndPort(server)
+			host = &freighter.Host{Host: ip, Port: port, Secure: false}
+			client = freighter.NewClient(nil)
+		})
+
+		AfterEach(func() {
+			if server.HTTPTestServer != nil {
+				server.Close()
+			}
+		})
+
+		itWorks := func() {
+			It("makes an HTTP POST request", func() {
+				fnUnderTest(host, id)
+
+				Expect(server.ReceivedRequests()).To(HaveLen(1))
+				req := server.ReceivedRequests()[0]
+				Expect(req.Method).To(Equal("POST"))
+				Expect(req.URL.Path).To(Equal(path))
+			})
+
+			Context("when the response is HTTP 200 OK", func() {
+				BeforeEach(func() {
+					statusCode = http.StatusOK
+				})
+
+				Context("when the response has a container", func() {
+					BeforeEach(func() {
+						responseBody = `{
+						"container": {
+							"id":"` + id + `",
+							"name":"mavericks",
+							"image":"ubuntu-upstart",
+							"host":"172.17.0.2",
+							"ssh_port":60002,
+							"state":"running"
+						}
+					}`
+					})
+
+					It("returns the Container", func() {
+						container, err := fnUnderTest(host, id)
+						Expect(err).To(BeNil())
+						Expect(container).NotTo(BeNil())
+
+						Expect(container.ID).To(Equal(id))
+						Expect(container.Name).To(Equal("mavericks"))
+						Expect(container.Image).To(Equal("ubuntu-upstart"))
+						Expect(container.Host).To(Equal("172.17.0.2"))
+						Expect(container.SSHPort).To(Equal(60002))
+						Expect(container.State).To(Equal("running"))
+					})
+				})
+
+				Context("when the response is empty", func() {
+					BeforeEach(func() {
+						responseBody = ``
+					})
+
+					It("returns ErrUnexpectedResponse", func() {
+						container, err := fnUnderTest(host, id)
+						Expect(err).To(MatchError(freighter.ErrUnexpectedResponse))
+						Expect(container).To(BeNil())
+					})
+				})
+			})
+
+			Context("when the response is HTTP 404 Not Found", func() {
+				BeforeEach(func() {
+					statusCode = http.StatusNotFound
+				})
+
+				It("returns ErrNotFound", func() {
+					container, err := fnUnderTest(host, id)
+					Expect(err).To(MatchError(freighter.ErrNotFound))
+					Expect(container).To(BeNil())
+				})
+			})
+
+			Context("when the response is not HTTP 200 OK nor HTTP 404 Not Found", func() {
+				BeforeEach(func() {
+					statusCode = http.StatusInternalServerError
+				})
+
+				It("returns a StatusError", func() {
+					container, err := fnUnderTest(host, id)
+					Expect(err).To(MatchError(&freighter.StatusError{Code: http.StatusInternalServerError}))
+					Expect(container).To(BeNil())
+				})
+			})
+		}
+
+		Describe("Start()", func() {
+			BeforeEach(func() {
+				fnUnderTest = client.Start
+				path = "/containers/" + id + "/start"
+			})
+
+			itWorks()
+		})
+
+		Describe("Stop()", func() {
+			BeforeEach(func() {
+				fnUnderTest = client.Stop
+				path = "/containers/" + id + "/stop"
+			})
+
+			itWorks()
+		})
+
+		Describe("Restart()", func() {
+			BeforeEach(func() {
+				fnUnderTest = client.Restart
+				path = "/containers/" + id + "/restart"
+			})
+
+			itWorks()
 		})
 	})
 })

@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+const (
+	StateRunning = "running"
+	StateStopped = "stopped"
+)
+
 var (
 	// ErrUnexpectedResponse is returned when any of the API requests receives
 	// an unexpected response body.
@@ -43,9 +48,10 @@ type Client interface {
 	// If there is no Container with the given id, Info should return
 	// ErrNotFound.
 	Info(host *Host, id string) (*Container, error)
-	// Start()
-	// Stop()
-	// Restart()
+
+	Start(host *Host, id string) (*Container, error)
+	Stop(host *Host, id string) (*Container, error)
+	Restart(host *Host, id string) (*Container, error)
 	// Terminate()
 }
 
@@ -174,14 +180,11 @@ func (c *client) Create(h *Host, name, image string) (*Container, error) {
 		return nil, &StatusError{resp.StatusCode}
 	}
 
-	var cntnr containerResponse
-	err = json.NewDecoder(resp.Body).Decode(&cntnr)
-	resp.Body.Close()
+	container, err := unmarshalContainer(resp)
 	if err != nil {
-		return nil, ErrUnexpectedResponse
+		return nil, err
 	}
-
-	return cntnr.Container, nil
+	return container, nil
 }
 
 // Info makes an API request to a given Freighter Host and returns the
@@ -208,12 +211,68 @@ func (c *client) Info(h *Host, id string) (*Container, error) {
 		return nil, &StatusError{resp.StatusCode}
 	}
 
+	container, err := unmarshalContainer(resp)
+	if err != nil {
+		return nil, err
+	}
+	return container, nil
+}
+
+// Start makes an API request to a given Freighter host to start the Container
+// with the given id. The Container is returned.
+// If the Container does not exist, ErrNotFound is returned.
+func (c *client) Start(h *Host, id string) (*Container, error) {
+	return c.containerControl(h, id, "start")
+}
+
+// Stop makes an API request to a given Freighter host to stop the Container
+// with the given id. The Container is returned.
+// If the Container does not exist, ErrNotFound is returned.
+func (c *client) Stop(h *Host, id string) (*Container, error) {
+	return c.containerControl(h, id, "stop")
+}
+
+// Restart makes an API request to a given Freighter host to restart the
+// Container with the given id. The Container is returned.
+// If the Container does not exist, ErrNotFound is returned.
+func (c *client) Restart(h *Host, id string) (*Container, error) {
+	return c.containerControl(h, id, "restart")
+}
+
+func (c *client) containerControl(h *Host, id string, action string) (*Container, error) {
+	u := fmt.Sprintf("%s/containers/%s/%s", h.BaseURL(), id, action)
+	req, err := http.NewRequest("POST", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, &RequestFailedError{Req: req, Err: err}
+	}
+	switch resp.StatusCode {
+	case http.StatusOK:
+		// Success, do nothing.
+	case http.StatusNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, &StatusError{resp.StatusCode}
+	}
+
+	container, err := unmarshalContainer(resp)
+	if err != nil {
+		return nil, err
+	}
+	return container, nil
+}
+
+func unmarshalContainer(resp *http.Response) (*Container, error) {
 	var cntnr containerResponse
-	err = json.NewDecoder(resp.Body).Decode(&cntnr)
+	err := json.NewDecoder(resp.Body).Decode(&cntnr)
 	resp.Body.Close()
 	if err != nil {
 		return nil, ErrUnexpectedResponse
 	}
-
 	return cntnr.Container, nil
 }

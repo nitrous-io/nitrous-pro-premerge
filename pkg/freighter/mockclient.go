@@ -14,6 +14,15 @@ type MockClient struct {
 	InfoCalled int
 	InfoError  error
 
+	StartCalled int
+	StartError  error
+
+	StopCalled int
+	StopError  error
+
+	RestartCalled int
+	RestartError  error
+
 	ReceivedID    string
 	ReceivedName  string
 	ReceivedImage string
@@ -49,4 +58,43 @@ func (c *MockClient) Info(h *Host, id string) (*Container, error) {
 		}
 	}
 	return nil, ErrNotFound
+}
+
+func (c *MockClient) Start(h *Host, id string) (*Container, error) {
+	c.StartCalled = c.StartCalled + 1
+	c.ReceivedID = id
+	if c.StartError != nil {
+		return nil, c.StartError
+	}
+	cntnr, _ := c.Info(h, id)
+	if cntnr != nil {
+		cntnr.State = StateRunning
+	}
+	return cntnr, nil
+}
+
+func (c *MockClient) Stop(h *Host, id string) (*Container, error) {
+	c.StopCalled = c.StopCalled + 1
+	c.ReceivedID = id
+	if c.StopError != nil {
+		return nil, c.StopError
+	}
+	cntnr, _ := c.Info(h, id)
+	if cntnr != nil {
+		cntnr.State = StateStopped
+	}
+	return cntnr, nil
+}
+
+func (c *MockClient) Restart(h *Host, id string) (*Container, error) {
+	c.RestartCalled = c.RestartCalled + 1
+	c.ReceivedID = id
+	if c.RestartError != nil {
+		return nil, c.RestartError
+	}
+	cntnr, _ := c.Info(h, id)
+	if cntnr != nil {
+		cntnr.State = StateRunning
+	}
+	return cntnr, nil
 }
