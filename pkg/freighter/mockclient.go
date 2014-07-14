@@ -9,9 +9,14 @@ type MockClient struct {
 
 	CreateCalled     int
 	CreateError      error
-	ReceivedName     string
-	ReceivedImage    string
 	CreatedContainer *Container
+
+	InfoCalled int
+	InfoError  error
+
+	ReceivedID    string
+	ReceivedName  string
+	ReceivedImage string
 }
 
 func (c *MockClient) List(h *Host) ([]*Container, error) {
@@ -30,4 +35,18 @@ func (c *MockClient) Create(h *Host, name, image string) (*Container, error) {
 	c.ReceivedName = name
 	c.ReceivedImage = image
 	return c.CreatedContainer, c.CreateError
+}
+
+func (c *MockClient) Info(h *Host, id string) (*Container, error) {
+	c.InfoCalled = c.InfoCalled + 1
+	c.ReceivedID = id
+	if c.InfoError != nil {
+		return nil, c.InfoError
+	}
+	for _, c := range c.Containers {
+		if c.ID == id {
+			return c, nil
+		}
+	}
+	return nil, ErrNotFound
 }

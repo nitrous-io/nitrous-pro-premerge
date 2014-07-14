@@ -136,10 +136,10 @@ var _ = Describe("freighter/client", func() {
 					responseBody = ``
 				})
 
-				It("returns ResponseError", func() {
+				It("returns ErrUnexpectedResponse", func() {
 					containers, err := client.List(host)
 					Expect(err).NotTo(BeNil())
-					Expect(err).To(Equal(freighter.ResponseError))
+					Expect(err).To(Equal(freighter.ErrUnexpectedResponse))
 					Expect(server.ReceivedRequests()).To(HaveLen(1))
 					Expect(containers).To(BeNil())
 				})
@@ -325,10 +325,10 @@ var _ = Describe("freighter/client", func() {
 					responseBody = ``
 				})
 
-				It("returns ResponseError", func() {
+				It("returns ErrUnexpectedResponse", func() {
 					container, err := client.Create(host, "yosemite", "ubuntu")
 					Expect(err).NotTo(BeNil())
-					Expect(err).To(Equal(freighter.ResponseError))
+					Expect(err).To(Equal(freighter.ErrUnexpectedResponse))
 					Expect(server.ReceivedRequests()).To(HaveLen(1))
 					Expect(container).To(BeNil())
 				})
@@ -361,10 +361,10 @@ var _ = Describe("freighter/client", func() {
 					responseBody = `error: "not really JSON"`
 				})
 
-				It("returns ResponseError", func() {
+				It("returns ErrUnexpectedResponse", func() {
 					container, err := client.Create(host, "yosemite", "ubuntu")
 					Expect(err).NotTo(BeNil())
-					Expect(err).To(Equal(freighter.ResponseError))
+					Expect(err).To(Equal(freighter.ErrUnexpectedResponse))
 					Expect(server.ReceivedRequests()).To(HaveLen(1))
 					Expect(container).To(BeNil())
 				})
@@ -378,6 +378,117 @@ var _ = Describe("freighter/client", func() {
 
 			It("returns a StatusError", func() {
 				container, err := client.Create(host, "yosemite", "ubuntu")
+				Expect(err).NotTo(BeNil())
+				_, ok := err.(*freighter.StatusError)
+				Expect(ok).To(BeTrue())
+				Expect(server.ReceivedRequests()).To(HaveLen(1))
+				Expect(container).To(BeNil())
+			})
+		})
+	})
+
+	Describe("Info()", func() {
+		var (
+			client freighter.Client
+			host   *freighter.Host
+
+			server       *ghttp.Server
+			handlers     http.HandlerFunc
+			statusCode   int
+			responseBody string
+		)
+
+		BeforeEach(func() {
+			handlers = ghttp.CombineHandlers(
+				ghttp.VerifyContentType("application/json"),
+				ghttp.RespondWithPtr(&statusCode, &responseBody),
+			)
+
+			server = ghttp.NewServer()
+			server.AppendHandlers(handlers)
+
+			ip, port := IPAndPort(server)
+			host = &freighter.Host{IP: ip, Port: port, Secure: false}
+			client = freighter.NewClient(nil)
+		})
+
+		AfterEach(func() {
+			if server.HTTPTestServer != nil {
+				server.Close()
+			}
+		})
+
+		Context("when the response is HTTP 200 OK", func() {
+			BeforeEach(func() {
+				statusCode = http.StatusOK
+			})
+
+			Context("when the response has a container", func() {
+				BeforeEach(func() {
+					responseBody = `{
+						"container": {
+							"id":"deadbeef",
+							"name":"mavericks",
+							"image":"ubuntu-upstart",
+							"host":"172.17.0.2",
+							"ssh_port":60002,
+							"state":"running"
+						}
+					}`
+				})
+
+				It("returns the Container", func() {
+					container, err := client.Info(host, "deadbeef")
+					Expect(err).To(BeNil())
+					Expect(container).NotTo(BeNil())
+
+					receivedRequests := server.ReceivedRequests()
+					Expect(receivedRequests).To(HaveLen(1))
+					Expect(receivedRequests[0].URL.Path).To(Equal("/containers/deadbeef"))
+
+					Expect(container.ID).To(Equal("deadbeef"))
+					Expect(container.Name).To(Equal("mavericks"))
+					Expect(container.Image).To(Equal("ubuntu-upstart"))
+					Expect(container.Host).To(Equal("172.17.0.2"))
+					Expect(container.SSHPort).To(Equal(60002))
+					Expect(container.State).To(Equal("running"))
+				})
+			})
+
+			Context("when the response is empty", func() {
+				BeforeEach(func() {
+					responseBody = ``
+				})
+
+				It("returns ErrUnexpectedResponse", func() {
+					container, err := client.Info(host, "deadbeef")
+					Expect(err).To(Equal(freighter.ErrUnexpectedResponse))
+					Expect(server.ReceivedRequests()).To(HaveLen(1))
+					Expect(container).To(BeNil())
+				})
+			})
+		})
+
+		Context("when the response is HTTP 404 Not Found", func() {
+			BeforeEach(func() {
+				statusCode = http.StatusNotFound
+			})
+
+			It("returns ErrNotFound", func() {
+				container, err := client.Info(host, "deadbeef")
+				Expect(err).To(Equal(freighter.ErrNotFound))
+				Expect(server.ReceivedRequests()).To(HaveLen(1))
+				Expect(container).To(BeNil())
+			})
+		})
+
+		Context("when the response is not HTTP 200 OK nor HTTP 404 Not Found", func() {
+			BeforeEach(func() {
+				statusCode = http.StatusInternalServerError
+			})
+
+			It("returns a StatusError", func() {
+				container, err := client.Info(host, "deadbeef")
 				Expect(err).NotTo(BeNil())
 				_, ok := err.(*freighter.StatusError)
 				Expect(ok).To(BeTrue())

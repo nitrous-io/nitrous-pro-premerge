@@ -12,11 +12,17 @@ import (
 )
 
 var (
-	ResponseError = errors.New("freighter: unexpected response")
+	// ErrUnexpectedResponse is returned when any of the API requests receives
+	// an unexpected response body.
+	ErrUnexpectedResponse = errors.New("freighter: unexpected response")
+
+	// ErrNotFound is returned when trying to perform an action against a
+	// container that does not exist.
+	ErrNotFound = errors.New("freighter: container not found")
 )
 
-// SharedHTTPClient is the shared default http.Client used by the convenience
-// List, Create, Info, Start, Stop, Restart, Terminate methods.
+// SharedHTTPClient is the shared default http.Client used by Clients created
+// with NewClient() without a given http.Client.
 var SharedHTTPClient = &http.Client{
 	Transport: &http.Transport{
 		Proxy: nil,
@@ -30,9 +36,13 @@ var SharedHTTPClient = &http.Client{
 
 // Client represents a Freighter API consumer.
 type Client interface {
-	List(*Host) ([]*Container, error)
+	List(host *Host) ([]*Container, error)
 	Create(host *Host, name, image string) (*Container, error)
-	// Info()
+
+	// Info returns the Container with the given id.
+	// If there is no Container with the given id, Info should return
+	// ErrNotFound.
+	Info(host *Host, id string) (*Container, error)
 	// Start()
 	// Stop()
 	// Restart()
@@ -126,7 +136,7 @@ func (c *client) List(h *Host) ([]*Container, error) {
 	err = json.NewDecoder(resp.Body).Decode(&cntnrs)
 	resp.Body.Close()
 	if err != nil {
-		return nil, ResponseError
+		return nil, ErrUnexpectedResponse
 	}
 
 	return cntnrs.Containers, nil
@@ -157,7 +167,7 @@ func (c *client) Create(h *Host, name, image string) (*Container, error) {
 		err = json.NewDecoder(resp.Body).Decode(&errResp)
 		resp.Body.Close()
 		if err != nil {
-			return nil, ResponseError
+			return nil, ErrUnexpectedResponse
 		}
 		return nil, &InvalidParamError{errResp.Error}
 	default:
@@ -168,7 +178,41 @@ func (c *client) Create(h *Host, name, image string) (*Container, error) {
 	err = json.NewDecoder(resp.Body).Decode(&cntnr)
 	resp.Body.Close()
 	if err != nil {
-		return nil, ResponseError
+		return nil, ErrUnexpectedResponse
+	}
+
+	return cntnr.Container, nil
+}
+
+// Info makes an API request to a given Freighter Host and returns the
+// Container with the given id.
+// If the Container does not exist, ErrNotFound is returned.
+func (c *client) Info(h *Host, id string) (*Container, error) {
+	u := h.BaseURL() + "/containers/" + id
+	req, err := http.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, &RequestFailedError{Req: req, Err: err}
+	}
+	switch resp.StatusCode {
+	case http.StatusOK:
+		// Success, do nothing.
+	case http.StatusNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, &StatusError{resp.StatusCode}
+	}
+
+	var cntnr containerResponse
+	err = json.NewDecoder(resp.Body).Decode(&cntnr)
+	resp.Body.Close()
+	if err != nil {
+		return nil, ErrUnexpectedResponse
 	}
 
 	return cntnr.Container, nil
