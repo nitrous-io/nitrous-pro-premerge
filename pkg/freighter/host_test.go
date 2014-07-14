@@ -24,7 +24,7 @@ var _ = Describe("freighter/host", func() {
 	Describe("BaseURL()", func() {
 		It("returns a URL based on its IP, port and whether it's secure", func() {
 			tests := []struct {
-				ip       string
+				host     string
 				port     int
 				secure   bool
 				expected string
@@ -38,7 +38,7 @@ var _ = Describe("freighter/host", func() {
 
 			var h *freighter.Host
 			for _, t := range tests {
-				h = freighter.NewHost(t.ip, t.port, t.secure)
+				h = freighter.NewHost(t.host, t.port, t.secure)
 				Expect(h.BaseURL()).To(Equal(t.expected))
 			}
 		})

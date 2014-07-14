@@ -57,7 +57,7 @@ var _ = Describe("freighter/client", func() {
 			server.AppendHandlers(handlers)
 
 			ip, port := IPAndPort(server)
-			host = &freighter.Host{IP: ip, Port: port, Secure: false}
+			host = &freighter.Host{Host: ip, Port: port, Secure: false}
 			client = freighter.NewClient(nil)
 		})
 
@@ -203,7 +203,7 @@ var _ = Describe("freighter/client", func() {
 				server.AppendHandlers(handlers)
 
 				ip, port := IPAndPort(server)
-				host = &freighter.Host{IP: ip, Port: port, Secure: true}
+				host = &freighter.Host{Host: ip, Port: port, Secure: true}
 
 				tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 				c := &http.Client{Transport: tr}
@@ -272,7 +272,7 @@ var _ = Describe("freighter/client", func() {
 			server.AppendHandlers(handlers)
 
 			ip, port := IPAndPort(server)
-			host = &freighter.Host{IP: ip, Port: port, Secure: false}
+			host = &freighter.Host{Host: ip, Port: port, Secure: false}
 			client = freighter.NewClient(nil)
 		})
 
@@ -408,7 +408,7 @@ var _ = Describe("freighter/client", func() {
 			server.AppendHandlers(handlers)
 
 			ip, port := IPAndPort(server)
-			host = &freighter.Host{IP: ip, Port: port, Secure: false}
+			host = &freighter.Host{Host: ip, Port: port, Secure: false}
 			client = freighter.NewClient(nil)
 		})
 

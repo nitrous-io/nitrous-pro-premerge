@@ -6,16 +6,17 @@ const defaultPort = 65343
 
 // Host represents a Freighter host.
 type Host struct {
-	IP     string
+	// Host is the hostname or IP address of a Freighter host.
+	Host   string
 	Port   int
 	Secure bool
 }
 
-func NewHost(ip string, port int, secure bool) *Host {
+func NewHost(host string, port int, secure bool) *Host {
 	if port == 0 {
 		port = defaultPort
 	}
-	return &Host{IP: ip, Port: port, Secure: secure}
+	return &Host{Host: host, Port: port, Secure: secure}
 }
 
 func (h *Host) BaseURL() string {
@@ -27,5 +28,5 @@ func (h *Host) BaseURL() string {
 	if port == 0 {
 		port = 65333
 	}
-	return fmt.Sprintf("%s://%s:%d", scheme, h.IP, port)
+	return fmt.Sprintf("%s://%s:%d", scheme, h.Host, port)
 }
