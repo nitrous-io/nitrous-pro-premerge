@@ -23,6 +23,9 @@ type MockClient struct {
 	RestartCalled int
 	RestartError  error
 
+	TerminateCalled int
+	TerminateError  error
+
 	ReceivedID    string
 	ReceivedName  string
 	ReceivedImage string
@@ -97,4 +100,16 @@ func (c *MockClient) Restart(h *Host, id string) (*Container, error) {
 		cntnr.State = StateRunning
 	}
 	return cntnr, nil
+}
+
+func (c *MockClient) Terminate(h *Host, id string) (*Container, error) {
+	c.TerminateCalled = c.TerminateCalled + 1
+	c.ReceivedID = id
+	cntnr, _ := c.Info(h, id)
+	if cntnr != nil {
+		cntnr.Host = ""
+		cntnr.State = ""
+		cntnr.SSHPort = 0
+	}
+	return cntnr, c.TerminateError
 }

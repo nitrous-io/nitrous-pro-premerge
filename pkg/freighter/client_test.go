@@ -640,4 +640,97 @@ var _ = Describe("freighter/client", func() {
 			itWorks()
 		})
 	})
+
+	Describe("Terminate()", func() {
+		var (
+			client freighter.Client
+			host   *freighter.Host
+
+			server       *ghttp.Server
+			handlers     http.HandlerFunc
+			statusCode   int
+			responseBody string
+		)
+
+		BeforeEach(func() {
+			handlers = ghttp.CombineHandlers(
+				ghttp.VerifyRequest("DELETE", "/containers/cafefeed"),
+				ghttp.VerifyContentType("application/json"),
+				ghttp.RespondWithPtr(&statusCode, &responseBody),
+			)
+
+			server = ghttp.NewServer()
+			server.AppendHandlers(handlers)
+
+			ip, port := IPAndPort(server)
+			host = &freighter.Host{Host: ip, Port: port, Secure: false}
+			client = freighter.NewClient(nil)
+		})
+
+		AfterEach(func() {
+			if server.HTTPTestServer != nil {
+				server.Close()
+			}
+		})
+
+		Context("when the response is HTTP 200 OK", func() {
+			BeforeEach(func() {
+				statusCode = http.StatusOK
+			})
+
+			Context("when the response has a container", func() {
+				BeforeEach(func() {
+					responseBody = `{"container":{"id":"cafefeed"}}`
+				})
+
+				It("returns the Container", func() {
+					container, err := client.Terminate(host, "cafefeed")
+					Expect(err).To(BeNil())
+					Expect(container).NotTo(BeNil())
+					Expect(server.ReceivedRequests()).To(HaveLen(1))
+
+					Expect(container.ID).To(Equal("cafefeed"))
+				})
+			})
+
+			Context("when the response is empty", func() {
+				BeforeEach(func() {
+					responseBody = ``
+				})
+
+				It("returns ErrUnexpectedResponse", func() {
+					container, err := client.Terminate(host, "cafefeed")
+					Expect(err).To(MatchError(freighter.ErrUnexpectedResponse))
+					Expect(server.ReceivedRequests()).To(HaveLen(1))
+					Expect(container).To(BeNil())
+				})
+			})
+		})
+
+		Context("when the response is HTTP 404 Not Found", func() {
+			BeforeEach(func() {
+				statusCode = http.StatusNotFound
+			})
+
+			It("returns ErrNotFound", func() {
+				container, err := client.Terminate(host, "cafefeed")
+				Expect(err).To(MatchError(freighter.ErrNotFound))
+				Expect(server.ReceivedRequests()).To(HaveLen(1))
+				Expect(container).To(BeNil())
+			})
+		})
+
+		Context("when the response is not HTTP 200 OK nor HTTP 404 Not Found", func() {
+			BeforeEach(func() {
+				statusCode = http.StatusInternalServerError
+			})
+
+			It("returns a StatusError", func() {
+				container, err := client.Terminate(host, "cafefeed")
+				Expect(err).To(MatchError(&freighter.StatusError{Code: http.StatusInternalServerError}))
+				Expect(server.ReceivedRequests()).To(HaveLen(1))
+				Expect(container).To(BeNil())
+			})
+		})
+	})
 })

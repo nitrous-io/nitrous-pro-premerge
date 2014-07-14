@@ -52,7 +52,7 @@ type Client interface {
 	Start(host *Host, id string) (*Container, error)
 	Stop(host *Host, id string) (*Container, error)
 	Restart(host *Host, id string) (*Container, error)
-	// Terminate()
+	Terminate(host *Host, id string) (*Container, error)
 }
 
 type (
@@ -62,11 +62,15 @@ type (
 		Host    string `json:"host"`
 		State   string `json:"state"`
 		Image   string `json:"image"`
-		SSHPort int    `json:"ssh_port"`
+		SSHPort int    `json:"ssh_port,omitempty"`
 	}
 
 	containerResponse struct {
 		*Container `json:"container"`
+
+		// TODO "result" seems redundant when Container.State is set and we are
+		// getting a HTTP 200 OK response.
+		Result string `json:"result,omitempty"`
 	}
 
 	containersResponse struct {
@@ -180,11 +184,11 @@ func (c *client) Create(h *Host, name, image string) (*Container, error) {
 		return nil, &StatusError{resp.StatusCode}
 	}
 
-	container, err := unmarshalContainer(resp)
+	containerResp, err := unmarshalContainerResponse(resp)
 	if err != nil {
 		return nil, err
 	}
-	return container, nil
+	return containerResp.Container, nil
 }
 
 // Info makes an API request to a given Freighter Host and returns the
@@ -211,11 +215,11 @@ func (c *client) Info(h *Host, id string) (*Container, error) {
 		return nil, &StatusError{resp.StatusCode}
 	}
 
-	container, err := unmarshalContainer(resp)
+	containerResp, err := unmarshalContainerResponse(resp)
 	if err != nil {
 		return nil, err
 	}
-	return container, nil
+	return containerResp.Container, nil
 }
 
 // Start makes an API request to a given Freighter host to start the Container
@@ -239,6 +243,37 @@ func (c *client) Restart(h *Host, id string) (*Container, error) {
 	return c.containerControl(h, id, "restart")
 }
 
+// Terminate makes an API request to a given Freighter host to terminate the
+// Container with the given id. The Container is returned.
+// If the Container does not exist, ErrNotFound is returned.
+func (c *client) Terminate(h *Host, id string) (*Container, error) {
+	u := fmt.Sprintf("%s/containers/%s", h.BaseURL(), id)
+	req, err := http.NewRequest("DELETE", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, &RequestFailedError{Req: req, Err: err}
+	}
+	switch resp.StatusCode {
+	case http.StatusOK:
+		// Success, do nothing.
+	case http.StatusNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, &StatusError{resp.StatusCode}
+	}
+
+	containerResp, err := unmarshalContainerResponse(resp)
+	if err != nil {
+		return nil, err
+	}
+	return containerResp.Container, nil
+}
+
 func (c *client) containerControl(h *Host, id string, action string) (*Container, error) {
 	u := fmt.Sprintf("%s/containers/%s/%s", h.BaseURL(), id, action)
 	req, err := http.NewRequest("POST", u, nil)
@@ -260,19 +295,19 @@ func (c *client) containerControl(h *Host, id string, action string) (*Container
 		return nil, &StatusError{resp.StatusCode}
 	}
 
-	container, err := unmarshalContainer(resp)
+	containerResp, err := unmarshalContainerResponse(resp)
 	if err != nil {
 		return nil, err
 	}
-	return container, nil
+	return containerResp.Container, nil
 }
 
-func unmarshalContainer(resp *http.Response) (*Container, error) {
+func unmarshalContainerResponse(resp *http.Response) (*containerResponse, error) {
 	var cntnr containerResponse
 	err := json.NewDecoder(resp.Body).Decode(&cntnr)
 	resp.Body.Close()
 	if err != nil {
 		return nil, ErrUnexpectedResponse
 	}
-	return cntnr.Container, nil
+	return &cntnr, nil
 }
