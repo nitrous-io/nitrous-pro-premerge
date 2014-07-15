@@ -32,7 +32,6 @@ var SharedHTTPClient = &http.Client{
 	Transport: &http.Transport{
 		Proxy: nil,
 		Dial: (&net.Dialer{
-			Timeout:   10 * time.Second,
 			KeepAlive: 10 * time.Second,
 		}).Dial,
 		TLSHandshakeTimeout: 10 * time.Second,
