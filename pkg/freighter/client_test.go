@@ -102,19 +102,23 @@ var _ = Describe("freighter/client", func() {
 					Expect(server.ReceivedRequests()).To(HaveLen(1))
 					Expect(containers).To(HaveLen(2))
 
-					Expect(containers[0].ID).To(Equal("cafebabe"))
-					Expect(containers[0].Name).To(Equal("yosemite"))
-					Expect(containers[0].Image).To(Equal("freighter.yosemite"))
-					Expect(containers[0].Host).To(Equal("172.17.0.1"))
-					Expect(containers[0].SSHPort).To(Equal(60001))
-					Expect(containers[0].State).To(Equal("running"))
+					Expect(containers[0]).To(Equal(&freighter.Container{
+						ID:      "cafebabe",
+						Name:    "yosemite",
+						Image:   "freighter.yosemite",
+						Host:    "172.17.0.1",
+						SSHPort: 60001,
+						State:   "running",
+					}))
 
-					Expect(containers[1].ID).To(Equal("deadbeef"))
-					Expect(containers[1].Name).To(Equal("mavericks"))
-					Expect(containers[1].Image).To(Equal("freighter.mavericks"))
-					Expect(containers[1].Host).To(Equal("172.17.0.2"))
-					Expect(containers[1].SSHPort).To(Equal(60002))
-					Expect(containers[1].State).To(Equal("running"))
+					Expect(containers[1]).To(Equal(&freighter.Container{
+						ID:      "deadbeef",
+						Name:    "mavericks",
+						Image:   "freighter.mavericks",
+						Host:    "172.17.0.2",
+						SSHPort: 60002,
+						State:   "running",
+					}))
 				})
 			})
 
@@ -233,12 +237,14 @@ var _ = Describe("freighter/client", func() {
 					Expect(server.ReceivedRequests()).To(HaveLen(1))
 					Expect(containers).To(HaveLen(1))
 
-					Expect(containers[0].ID).To(Equal("cafebabe"))
-					Expect(containers[0].Name).To(Equal("yosemite"))
-					Expect(containers[0].Image).To(Equal("freighter.yosemite"))
-					Expect(containers[0].Host).To(Equal("172.17.0.1"))
-					Expect(containers[0].SSHPort).To(Equal(60001))
-					Expect(containers[0].State).To(Equal("running"))
+					Expect(containers[0]).To(Equal(&freighter.Container{
+						ID:      "cafebabe",
+						Name:    "yosemite",
+						Image:   "freighter.yosemite",
+						Host:    "172.17.0.1",
+						SSHPort: 60001,
+						State:   "running",
+					}))
 				})
 			})
 		})
@@ -311,12 +317,14 @@ var _ = Describe("freighter/client", func() {
 					Expect(receivedRequests[0].PostFormValue("name")).To(Equal("yosemite"))
 					Expect(receivedRequests[0].PostFormValue("image")).To(Equal("ubuntu"))
 
-					Expect(container.ID).To(Equal("cafebabe"))
-					Expect(container.Name).To(Equal("yosemite"))
-					Expect(container.Image).To(Equal("ubuntu"))
-					Expect(container.Host).To(Equal("172.17.0.1"))
-					Expect(container.SSHPort).To(Equal(60001))
-					Expect(container.State).To(Equal("running"))
+					Expect(container).To(Equal(&freighter.Container{
+						ID:      "cafebabe",
+						Name:    "yosemite",
+						Image:   "ubuntu",
+						Host:    "172.17.0.1",
+						SSHPort: 60001,
+						State:   "running",
+					}))
 				})
 			})
 
@@ -444,12 +452,14 @@ var _ = Describe("freighter/client", func() {
 					Expect(container).NotTo(BeNil())
 					Expect(server.ReceivedRequests()).To(HaveLen(1))
 
-					Expect(container.ID).To(Equal("deadbeef"))
-					Expect(container.Name).To(Equal("mavericks"))
-					Expect(container.Image).To(Equal("ubuntu-upstart"))
-					Expect(container.Host).To(Equal("172.17.0.2"))
-					Expect(container.SSHPort).To(Equal(60002))
-					Expect(container.State).To(Equal("running"))
+					Expect(container).To(Equal(&freighter.Container{
+						ID:      "deadbeef",
+						Name:    "mavericks",
+						Image:   "ubuntu-upstart",
+						Host:    "172.17.0.2",
+						SSHPort: 60002,
+						State:   "running",
+					}))
 				})
 			})
 
@@ -566,12 +576,14 @@ var _ = Describe("freighter/client", func() {
 						Expect(err).To(BeNil())
 						Expect(container).NotTo(BeNil())
 
-						Expect(container.ID).To(Equal(id))
-						Expect(container.Name).To(Equal("mavericks"))
-						Expect(container.Image).To(Equal("ubuntu-upstart"))
-						Expect(container.Host).To(Equal("172.17.0.2"))
-						Expect(container.SSHPort).To(Equal(60002))
-						Expect(container.State).To(Equal("running"))
+						Expect(container).To(Equal(&freighter.Container{
+							ID:      id,
+							Name:    "mavericks",
+							Image:   "ubuntu-upstart",
+							Host:    "172.17.0.2",
+							SSHPort: 60002,
+							State:   "running",
+						}))
 					})
 				})
 
