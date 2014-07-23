@@ -105,7 +105,7 @@ func withHost(src string, srcVar string, fn hostHandlerFn) Middleware {
 		case "form":
 			hSlug = r.FormValue(srcVar)
 		case "path":
-			hSlug = mux.Vars(r)[srcVar]
+			hSlug = env.Vars[srcVar]
 		default:
 			return errors.New("Invalid host source: " + src)
 		}
