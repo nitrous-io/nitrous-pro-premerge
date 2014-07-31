@@ -90,12 +90,13 @@ var _ = Describe("controllers/images", func() {
 	})
 
 	Describe("GET /api/v0/hosts/{slug}/images", func() {
-		doRequest := func(token, host string) {
-			req, err := NewRequest("GET", fmt.Sprintf("/api/v0/hosts/%v/images", host), nil)
-			Expect(err).To(BeNil())
-			if token != "" {
-				req.Header.Set("Authorization", "Bearer "+token)
+		doRequest := func(host string, validAuth bool) {
+			authToken := &token.Token{Token: "notgonnawork"}
+			if validAuth {
+				authToken = t
 			}
+			req, err := NewAuthedRequest(authToken, "GET", fmt.Sprintf("/api/v0/hosts/%v/images", host), nil)
+			Expect(err).To(BeNil())
 			handler.ServeHTTP(res, req)
 		}
 
@@ -129,12 +130,12 @@ var _ = Describe("controllers/images", func() {
 					})
 
 					It("calls the Freighter client to list images", func() {
-						doRequest("valid-token", "foo")
+						doRequest("foo", true)
 						Expect(mockClient.ListImagesCalled).To(Equal(1))
 					})
 
 					It("responds with the images from Freighter", func() {
-						doRequest("valid-token", "foo")
+						doRequest("foo", true)
 
 						Expect(res.Code).To(Equal(http.StatusOK))
 
@@ -161,7 +162,7 @@ var _ = Describe("controllers/images", func() {
 						})
 
 						It("responds with HTTP 500 Internal Server Error", func() {
-							doRequest("valid-token", "foo")
+							doRequest("foo", true)
 
 							Expect(res.Code).To(Equal(http.StatusInternalServerError))
 
@@ -180,7 +181,7 @@ var _ = Describe("controllers/images", func() {
 						})
 
 						It("responds with an empty array", func() {
-							doRequest("valid-token", "foo")
+							doRequest("foo", true)
 
 							Expect(res.Code).To(Equal(http.StatusOK))
 							j := map[string]interface{}{}
@@ -210,7 +211,7 @@ var _ = Describe("controllers/images", func() {
 						})
 
 						It("returns HTTP 400 Bad Request", func() {
-							doRequest("valid-token", "bar")
+							doRequest("bar", true)
 
 							Expect(res.Code).To(Equal(http.StatusBadRequest))
 							Expect(mockClient.ListImagesCalled).To(Equal(0))
@@ -230,7 +231,7 @@ var _ = Describe("controllers/images", func() {
 
 				Context("when host does not exist for user", func() {
 					It("returns HTTP 404 Not Found", func() {
-						doRequest("valid-token", "no-such-host")
+						doRequest("no-such-host", true)
 
 						Expect(res.Code).To(Equal(http.StatusNotFound))
 						Expect(mockClient.ListImagesCalled).To(Equal(0))

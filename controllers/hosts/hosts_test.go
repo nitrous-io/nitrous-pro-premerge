@@ -36,11 +36,6 @@ func Test(t *testing.T) {
 	RunSpecs(t, "controllers/hosts")
 }
 
-type errorResponse struct {
-	Error            string `json:"error"`
-	ErrorDescription string `json:"error_description"`
-}
-
 func mockHostbuilderOK(path string, provider string, config *hostbuilderclient.Config) (*hostbuilder.Response, error) {
 	return &hostbuilder.Response{Status: "ok"}, nil
 }
@@ -60,12 +55,6 @@ var _ = Describe("controllers/hosts", func() {
 		t  *token.Token
 		hs *HostStack
 	)
-
-	unmarshalErrorResponse := func() (error, *errorResponse) {
-		errRes := &errorResponse{}
-		err := json.Unmarshal(res.Body.Bytes(), errRes)
-		return err, errRes
-	}
 
 	BeforeEach(func() {
 		var err error
@@ -222,11 +211,9 @@ var _ = Describe("controllers/hosts", func() {
 
 					Expect(res.Code).To(Equal(http.StatusBadRequest))
 
-					err, j := unmarshalErrorResponse()
-					Expect(err).To(BeNil())
-
-					Expect(j.Error).To(Equal("invalid_request"))
-					Expect(j.ErrorDescription).To(Equal(p + " is required"))
+					errType, errDesc := ErrorDetails(res.Body)
+					Expect(errType).To(Equal("invalid_request"))
+					Expect(errDesc).To(Equal(p + " is required"))
 				})
 			})
 		}
@@ -237,11 +224,9 @@ var _ = Describe("controllers/hosts", func() {
 
 				Expect(res.Code).To(Equal(http.StatusBadRequest))
 
-				err, j := unmarshalErrorResponse()
-				Expect(err).To(BeNil())
-
-				Expect(j.Error).To(Equal("invalid_request"))
-				Expect(j.ErrorDescription).To(Equal("no matching plan found for the given size"))
+				errType, errDesc := ErrorDetails(res.Body)
+				Expect(errType).To(Equal("invalid_request"))
+				Expect(errDesc).To(Equal("no matching plan found for the given size"))
 			})
 		})
 
@@ -251,11 +236,9 @@ var _ = Describe("controllers/hosts", func() {
 
 				Expect(res.Code).To(Equal(http.StatusBadRequest))
 
-				err, j := unmarshalErrorResponse()
-				Expect(err).To(BeNil())
-
-				Expect(j.Error).To(Equal("invalid_request"))
-				Expect(j.ErrorDescription).To(Equal("no matching region found for the given name"))
+				errType, errDesc := ErrorDetails(res.Body)
+				Expect(errType).To(Equal("invalid_request"))
+				Expect(errDesc).To(Equal("no matching region found for the given name"))
 			})
 		})
 
@@ -271,11 +254,9 @@ var _ = Describe("controllers/hosts", func() {
 
 				Expect(res.Code).To(Equal(http.StatusBadRequest))
 
-				err, j := unmarshalErrorResponse()
-				Expect(err).To(BeNil())
-
-				Expect(j.Error).To(Equal("invalid_request"))
-				Expect(j.ErrorDescription).To(Equal("no matching templates found for the given plan and regions combination"))
+				errType, errDesc := ErrorDetails(res.Body)
+				Expect(errType).To(Equal("invalid_request"))
+				Expect(errDesc).To(Equal("no matching templates found for the given plan and regions combination"))
 			})
 		})
 
@@ -664,11 +645,9 @@ var _ = Describe("controllers/hosts", func() {
 
 				Expect(res.Code).To(Equal(http.StatusBadRequest))
 
-				err, j := unmarshalErrorResponse()
-				Expect(err).To(BeNil())
-
-				Expect(j.Error).To(Equal("invalid_state"))
-				Expect(j.ErrorDescription).To(Equal("host is not stopped"))
+				errType, errDesc := ErrorDetails(res.Body)
+				Expect(errType).To(Equal("invalid_state"))
+				Expect(errDesc).To(Equal("host is not stopped"))
 			})
 		})
 
@@ -753,11 +732,9 @@ var _ = Describe("controllers/hosts", func() {
 
 				Expect(res.Code).To(Equal(http.StatusBadRequest))
 
-				err, j := unmarshalErrorResponse()
-				Expect(err).To(BeNil())
-
-				Expect(j.Error).To(Equal("invalid_state"))
-				Expect(j.ErrorDescription).To(Equal("host is not running"))
+				errType, errDesc := ErrorDetails(res.Body)
+				Expect(errType).To(Equal("invalid_state"))
+				Expect(errDesc).To(Equal("host is not running"))
 			})
 		})
 
@@ -842,11 +819,9 @@ var _ = Describe("controllers/hosts", func() {
 
 				Expect(res.Code).To(Equal(http.StatusBadRequest))
 
-				err, j := unmarshalErrorResponse()
-				Expect(err).To(BeNil())
-
-				Expect(j.Error).To(Equal("invalid_state"))
-				Expect(j.ErrorDescription).To(Equal("host is not running"))
+				errType, errDesc := ErrorDetails(res.Body)
+				Expect(errType).To(Equal("invalid_state"))
+				Expect(errDesc).To(Equal("host is not running"))
 			})
 		})
 
