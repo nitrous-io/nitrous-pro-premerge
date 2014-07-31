@@ -144,10 +144,8 @@ var _ = Describe("controllers/tokens", func() {
 
 			It("responds with 400 bad request", func() {
 				Expect(res.Code).To(Equal(http.StatusBadRequest))
-				j := map[string]interface{}{}
-				err := json.Unmarshal(res.Body.Bytes(), &j)
-				Expect(err).To(BeNil())
-				Expect(j["error"]).To(Equal("invalid_grant"))
+				errType, _ := ErrorDetails(res.Body)
+				Expect(errType).To(Equal("invalid_grant"))
 			})
 		})
 
@@ -159,10 +157,8 @@ var _ = Describe("controllers/tokens", func() {
 
 			It("responds with 400 bad request", func() {
 				Expect(res.Code).To(Equal(http.StatusBadRequest))
-				j := map[string]interface{}{}
-				err := json.Unmarshal(res.Body.Bytes(), &j)
-				Expect(err).To(BeNil())
-				Expect(j["error"]).To(Equal("unsupported_grant_type"))
+				errType, _ := ErrorDetails(res.Body)
+				Expect(errType).To(Equal("unsupported_grant_type"))
 			})
 		})
 
@@ -175,11 +171,9 @@ var _ = Describe("controllers/tokens", func() {
 
 				It("responds with 400 bad request", func() {
 					Expect(res.Code).To(Equal(http.StatusBadRequest))
-					j := map[string]string{}
-					err := json.Unmarshal(res.Body.Bytes(), &j)
-					Expect(err).To(BeNil())
-					Expect(j["error"]).To(Equal("invalid_request"))
-					Expect(j["error_description"]).To(Equal(v + " is required"))
+					errType, errDesc := ErrorDetails(res.Body)
+					Expect(errType).To(Equal("invalid_request"))
+					Expect(errDesc).To(Equal(v + " is required"))
 				})
 			})
 		}

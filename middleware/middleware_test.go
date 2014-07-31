@@ -1,7 +1,6 @@
 package middleware_test
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -129,11 +128,10 @@ var _ = Describe("middleware", func() {
 			It("responds with 401 Unauthorized", func() {
 				Expect(res.Code).To(Equal(http.StatusUnauthorized))
 				Expect(res.Header().Get("WWW-Authenticate")).To(Equal(`Bearer realm="nitrous", error="invalid_token"`))
-				j := map[string]interface{}{}
-				err := json.Unmarshal(res.Body.Bytes(), &j)
-				Expect(err).To(BeNil())
-				Expect(j["error"]).To(Equal("invalid_token"))
-				Expect(j["error_description"]).To(Equal("auth token is invalid"))
+
+				errType, errDesc := ErrorDetails(res.Body)
+				Expect(errType).To(Equal("invalid_token"))
+				Expect(errDesc).To(Equal("auth token is invalid"))
 			})
 		})
 
@@ -145,11 +143,9 @@ var _ = Describe("middleware", func() {
 			It("responds with 400 Bad Request", func() {
 				Expect(res.Code).To(Equal(http.StatusBadRequest))
 				Expect(res.Header().Get("WWW-Authenticate")).To(Equal(`Bearer realm="nitrous", error="invalid_request"`))
-				j := map[string]interface{}{}
-				err := json.Unmarshal(res.Body.Bytes(), &j)
-				Expect(err).To(BeNil())
-				Expect(j["error"]).To(Equal("invalid_request"))
-				Expect(j["error_description"]).To(Equal("auth token is required"))
+				errType, errDesc := ErrorDetails(res.Body)
+				Expect(errType).To(Equal("invalid_request"))
+				Expect(errDesc).To(Equal("auth token is required"))
 			})
 		})
 	})

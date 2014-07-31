@@ -118,14 +118,16 @@ func NewAuthedFormRequest(t *token.Token, method string, urlStr string, params *
 	return req, nil
 }
 
-// ErrorSlug expects a JSON object as string with 'error' and
-// 'error_description' keys, and returns those respectively.  It swallows any
-// errors and returns two empty strings.
-func ErrorSlug(body io.Reader) (string, string) {
+// ErrorDetails expects a JSON object as string with 'error' and
+// 'error_description' keys, and returns those respectively.  If an error is
+// encountered while decoding, it returns "ERRDETAILS" and the error
+// description in both strings
+func ErrorDetails(body io.Reader) (string, string) {
 	j := map[string]string{}
 	err := json.NewDecoder(body).Decode(&j)
 	if err != nil {
-		return "", ""
+		r := fmt.Sprintf("ERRDETAILS: %s", err.Error())
+		return r, r
 	}
 	return j["error"], j["error_description"]
 }
