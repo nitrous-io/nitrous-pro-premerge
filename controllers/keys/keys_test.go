@@ -118,9 +118,9 @@ var _ = Describe("controllers/keys", func() {
 	})
 
 	Describe("GET /api/v0/containers/{container}/keys", func() {
-		doRequest := func(token string) {
+		doRequest := func() {
 			var err error
-			req, err = NewAPIRequest(token, "GET", fmt.Sprintf("/api/v0/containers/%s/keys", c.Slug), params)
+			req, err = NewAuthedRequest(authToken, "GET", fmt.Sprintf("/api/v0/containers/%s/keys", c.Slug), params)
 			Expect(err).To(BeNil())
 			handler.ServeHTTP(res, req)
 		}
@@ -142,7 +142,7 @@ var _ = Describe("controllers/keys", func() {
 					}
 
 					params = &url.Values{}
-					doRequest("valid-token")
+					doRequest()
 				})
 
 				It("responds with ok", func() {
@@ -169,7 +169,7 @@ var _ = Describe("controllers/keys", func() {
 			Context("when user has no keys", func() {
 				BeforeEach(func() {
 					params = &url.Values{}
-					doRequest("valid-token")
+					doRequest()
 				})
 
 				It("returns empty array", func() {
@@ -192,9 +192,9 @@ var _ = Describe("controllers/keys", func() {
 	for _, meth := range []string{"POST", "PUT"} {
 		m := meth
 		Describe(m+" /api/v0/containers/{container}/keys", func() {
-			doRequest := func(token, slug string) {
+			doRequest := func(slug string) {
 				var err error
-				req, err = NewAPIRequest(token, m, fmt.Sprintf("/api/v0/containers/%s/keys", slug), params)
+				req, err = NewAuthedRequest(authToken, m, fmt.Sprintf("/api/v0/containers/%s/keys", slug), params)
 				Expect(err).To(BeNil())
 				handler.ServeHTTP(res, req)
 			}
@@ -204,7 +204,7 @@ var _ = Describe("controllers/keys", func() {
 					BeforeEach(func() {
 						params = &url.Values{}
 						params.Set("keytext", "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC0Ddg2BE+XhqJHHI164Sxi7euv5bTTxdW1D/mUTd1uQruFvyyMPAVjRhR1aSgvh8DGlaj/ndV5CViR6zU9upLf9XPjCg84/4HMBpbhSA3PWRb6YMwf85HEAfiXYLmw06PD40Ts6EHbvtWfQLo06bxsnGaRaP4dJNZRkDpEuQTZNoWh0SQzG3Ww5TA7V80WCAdBnIOXymjGDm+Ri24RibmO+mp4s2dnevZOPXAOSAn5axd5X6INg+TEYFaEvFT8JnBTBvCWTTeHj+Xti9wWBcGbdFI/vAoHNrDtCav0UBe5ueItXAUklm4lo7uG+CL/33fLQ+iEC+WTTivTt9U0IORB")
-						doRequest("valid-token", c.Slug)
+						doRequest(c.Slug)
 						mockClient.AddPublicKeysError = nil
 					})
 
@@ -230,7 +230,7 @@ var _ = Describe("controllers/keys", func() {
 
 						params = &url.Values{}
 						params.Set("keytext", validKeys[0])
-						doRequest("valid-token", c.Slug)
+						doRequest(c.Slug)
 					})
 
 					It("responds with bad request", func() {
@@ -242,7 +242,7 @@ var _ = Describe("controllers/keys", func() {
 					BeforeEach(func() {
 						params = &url.Values{}
 						params.Set("keytext", "ssh-rsa bad key!!")
-						doRequest("valid-token", c.Slug)
+						doRequest(c.Slug)
 					})
 
 					It("responds with bad request", func() {
@@ -254,7 +254,7 @@ var _ = Describe("controllers/keys", func() {
 					BeforeEach(func() {
 						params = &url.Values{}
 						params.Set("keytext", validKeys[0])
-						doRequest("valid-token", "container-that-does-not-exist")
+						doRequest("container-that-does-not-exist")
 					})
 
 					It("responds with bad request", func() {
@@ -267,7 +267,7 @@ var _ = Describe("controllers/keys", func() {
 						mockClient.AddPublicKeysError = freighterclient.ErrPubKeyOpsNotSupported
 						params = &url.Values{}
 						params.Set("keytext", "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC0Ddg2BE+XhqJHHI164Sxi7euv5bTTxdW1D/mUTd1uQruFvyyMPAVjRhR1aSgvh8DGlaj/ndV5CViR6zU9upLf9XPjCg84/4HMBpbhSA3PWRb6YMwf85HEAfiXYLmw06PD40Ts6EHbvtWfQLo06bxsnGaRaP4dJNZRkDpEuQTZNoWh0SQzG3Ww5TA7V80WCAdBnIOXymjGDm+Ri24RibmO+mp4s2dnevZOPXAOSAn5axd5X6INg+TEYFaEvFT8JnBTBvCWTTeHj+Xti9wWBcGbdFI/vAoHNrDtCav0UBe5ueItXAUklm4lo7uG+CL/33fLQ+iEC+WTTivTt9U0IORB")
-						doRequest("valid-token", c.Slug)
+						doRequest(c.Slug)
 					})
 
 					It("responds with bad request", func() {
@@ -294,9 +294,9 @@ var _ = Describe("controllers/keys", func() {
 	}
 
 	Describe("DELETE /api/v0/containers/{container}/keys", func() {
-		doRequest := func(token, slug string) {
+		doRequest := func(slug string) {
 			var err error
-			req, err = NewAPIRequest(token, "DELETE", fmt.Sprintf("/api/v0/containers/%s/keys", slug), params)
+			req, err = NewAuthedRequest(authToken, "DELETE", fmt.Sprintf("/api/v0/containers/%s/keys", slug), params)
 			Expect(err).To(BeNil())
 			handler.ServeHTTP(res, req)
 		}
@@ -324,7 +324,7 @@ var _ = Describe("controllers/keys", func() {
 				Context("when call to freighterclient succeeds", func() {
 					BeforeEach(func() {
 						mockClient.ClearPublicKeysError = nil
-						doRequest("valid-token", c.Slug)
+						doRequest(c.Slug)
 					})
 
 					It("removes all of them", func() {
@@ -341,7 +341,7 @@ var _ = Describe("controllers/keys", func() {
 				Context("when the call to freighter fails for some reason", func() {
 					BeforeEach(func() {
 						mockClient.ClearPublicKeysError = freighterclient.ErrPubKeyOpsNotSupported
-						doRequest("valid-token", c.Slug)
+						doRequest(c.Slug)
 					})
 
 					It("returns bad request", func() {
@@ -361,7 +361,7 @@ var _ = Describe("controllers/keys", func() {
 			Context("when user has no keys", func() {
 				BeforeEach(func() {
 					params = &url.Values{}
-					doRequest("valid-token", c.Slug)
+					doRequest(c.Slug)
 					mockClient.ClearPublicKeysError = nil
 				})
 
@@ -388,9 +388,9 @@ var _ = Describe("controllers/keys", func() {
 		var c2 *container.Container
 		var fprint string
 
-		doRequest := func(token, slug, fingerprint string) {
+		doRequest := func(slug, fingerprint string) {
 			var err error
-			req, err = NewAPIRequest(token, "DELETE",
+			req, err = NewAuthedRequest(authToken, "DELETE",
 				fmt.Sprintf("/api/v0/containers/%s/keys/%s", slug, fingerprint), params)
 			Expect(err).To(BeNil())
 			handler.ServeHTTP(res, req)
@@ -429,7 +429,7 @@ var _ = Describe("controllers/keys", func() {
 				})
 
 				It("is successful when key is present in container", func() {
-					doRequest("valid-token", c.Slug, fprint)
+					doRequest(c.Slug, fprint)
 					expectSuccessfulRequest("ok")
 					Expect(mockClient.RemovePublicKeyCalled).To(Equal(1))
 					Expect(mockClient.ReceivedID).To(Equal(c.CID))
@@ -442,14 +442,14 @@ var _ = Describe("controllers/keys", func() {
 				})
 
 				It("should respond with bad request", func() {
-					doRequest("valid-token", c.Slug, fprint)
+					doRequest(c.Slug, fprint)
 					expectBadRequest("public key operations not supported on this container")
 					Expect(mockClient.RemovePublicKeyCalled).To(Equal(1))
 					Expect(mockClient.ReceivedID).To(Equal(c.CID))
 				})
 
 				It("should not destroy the keys from the database", func() {
-					doRequest("valid-token", c.Slug, fprint)
+					doRequest(c.Slug, fprint)
 					pks, err := publickey.FindAllByUserIDAndContainerID(db, hs.U.ID, c.ID)
 					Expect(err).To(BeNil())
 					Expect(len(pks)).To(Equal(2))
@@ -457,7 +457,7 @@ var _ = Describe("controllers/keys", func() {
 			})
 
 			It("is unsuccessful when key is not in container", func() {
-				doRequest("valid-token", c2.Slug, fprint)
+				doRequest(c2.Slug, fprint)
 				expectBadRequest("fingerprint not found")
 				Expect(mockClient.RemovePublicKeyCalled).To(Equal(0))
 

@@ -125,7 +125,7 @@ var _ = Describe("controllers/registries", func() {
 				delete(o, "slug")
 			}
 
-			req, err := NewRequest("GET", "/api/v0/hosts/"+slug+"/registries", nil)
+			req, err := NewAuthedRequest(t, "GET", "/api/v0/hosts/"+slug+"/registries", nil)
 			Expect(err).To(BeNil())
 			req.Header.Set("Authorization", "Bearer valid-token")
 			handler.ServeHTTP(res, req)
@@ -228,9 +228,8 @@ var _ = Describe("controllers/registries", func() {
 
 				}
 
-				req, err := NewRequest("POST", "/api/v0/hosts/"+slug+"/registries", params)
+				req, err := NewAuthedFormRequest(t, "POST", "/api/v0/hosts/"+slug+"/registries", params)
 				Expect(err).To(BeNil())
-				req.Header.Set("Authorization", "Bearer valid-token")
 				handler.ServeHTTP(res, req)
 			}
 
@@ -395,9 +394,8 @@ var _ = Describe("controllers/registries", func() {
 			params := &url.Values{}
 			params.Set("registry", r)
 
-			req, err := NewRequest("DELETE", "/api/v0/hosts/"+slug+"/registries", params)
+			req, err := NewAuthedRequest(t, "DELETE", "/api/v0/hosts/"+slug+"/registries", params)
 			Expect(err).To(BeNil())
-			req.Header.Set("Authorization", "Bearer valid-token")
 			handler.ServeHTTP(res, req)
 		}
 

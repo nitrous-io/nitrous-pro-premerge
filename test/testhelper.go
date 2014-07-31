@@ -72,15 +72,6 @@ func TruncateTables(db *db.Database) error {
 	return nil
 }
 
-func NewAPIRequest(token string, method string, urlStr string, params *url.Values) (*http.Request, error) {
-	req, err := NewRequest(method, urlStr, params)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	return req, nil
-}
-
 func NewRequest(method string, urlStr string, params *url.Values) (*http.Request, error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
