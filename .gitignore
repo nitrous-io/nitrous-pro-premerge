@@ -31,6 +31,7 @@ bin/
 _vendor/
 build/
 release/
+tmp/
 
 # Architecture specific extensions/prefixes
 *.[568vq]

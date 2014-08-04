@@ -33,6 +33,10 @@ run: build
 	@echo "$(OK_COLOR)==> Running...$(NO_COLOR)"
 	@goop exec forego start
 
+dev:
+	@echo "$(OK_COLOR)==> Running (development mode)...$(NO_COLOR)"
+	@goop exec forego start -f Procfile.dev
+
 createdb:
 	createdb -E UTF8 -T template0 -l en_US.utf8 nitrous_development || true
 	sudo su postgres -c "psql -d nitrous_development -c 'CREATE EXTENSION IF NOT EXISTS hstore;'" || true
