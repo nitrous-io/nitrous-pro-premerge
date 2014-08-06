@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 type Client struct {
@@ -22,7 +23,8 @@ var (
 	ErrInvalidPayload = errors.New("shover: invalid payload")
 )
 
-func (c *Client) Publish(userID int, event string, data interface{}) error {
+func (c *Client) Publish(userID int, event string, data map[string]interface{}) error {
+	data["_t"] = time.Now().Unix()
 	payload, err := c.signer.Generate(userID, event, data)
 	if err != nil {
 		return err
@@ -30,7 +32,8 @@ func (c *Client) Publish(userID int, event string, data interface{}) error {
 	return c.post(c.publishURL, payload)
 }
 
-func (c *Client) Broadcast(event string, data interface{}) error {
+func (c *Client) Broadcast(event string, data map[string]interface{}) error {
+	data["_t"] = time.Now().Unix()
 	payload, err := c.signer.Generate(event, data)
 	if err != nil {
 		return err

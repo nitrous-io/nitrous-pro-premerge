@@ -20,7 +20,12 @@ func Test(t *testing.T) {
 type fakeMessageSigner struct{}
 
 func (s *fakeMessageSigner) Generate(data ...interface{}) (string, error) {
-	return fmt.Sprint(data...), nil
+	hash, ok := data[len(data)-1].(map[string]interface{})
+	Expect(ok).To(BeTrue(), `Expected last arg to be a map[string]interface{}`)
+	ts, ok := hash["_t"]
+	Expect(ok).To(BeTrue(), `Expected data hash to include a "_t" key`)
+	Expect(ts).NotTo(BeZero())
+	return fmt.Sprintf("message-length-%d", len(data)), nil
 }
 
 var _ = Describe("shover", func() {
@@ -39,9 +44,7 @@ var _ = Describe("shover", func() {
 					err := req.ParseForm()
 					Expect(err).To(BeNil())
 
-					msg, err := signer.Generate(1, "host_created", map[string]interface{}{"id": 123})
-					Expect(err).To(BeNil())
-					Expect(req.PostFormValue("p")).To(Equal(msg))
+					Expect(req.PostFormValue("p")).To(Equal("message-length-3"))
 				},
 				ghttp.VerifyRequest("POST", "/publish"),
 				ghttp.RespondWithPtr(&statusCode, &responseBody),
@@ -81,9 +84,7 @@ var _ = Describe("shover", func() {
 					err := req.ParseForm()
 					Expect(err).To(BeNil())
 
-					msg, err := signer.Generate("broadcast_event", map[string]interface{}{"foo": "bar"})
-					Expect(err).To(BeNil())
-					Expect(req.PostFormValue("p")).To(Equal(msg))
+					Expect(req.PostFormValue("p")).To(Equal("message-length-2"))
 				},
 				ghttp.VerifyRequest("POST", "/broadcast"),
 				ghttp.RespondWithPtr(&statusCode, &responseBody),
