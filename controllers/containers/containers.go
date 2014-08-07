@@ -2,6 +2,7 @@ package containers
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -263,7 +264,36 @@ func start(cn *container.Container, h *host.Host, env *middleware.Env, c control
 	if err != nil {
 		return err
 	}
-	return performControlAction(cl.Start, cn, h, env, c, w, r)
+
+	hv, err := hostVolumes(c.DB(), h)
+	if err != nil {
+		return err
+	}
+
+	if err := r.ParseForm(); err != nil {
+		return err
+	}
+	config, err := prepareConfig(r.PostForm, hv)
+	if err != nil {
+		return err
+	}
+
+	log := c.Logger()
+	log.Infof("config is %+v", config)
+
+	liveContainer, err := cl.StartWithConfig(cn.CID, config)
+	if err != nil {
+		return err
+	}
+
+	cn = hydrateContainer(cn, liveContainer, h)
+
+	env.Status = http.StatusOK
+	env.Data = map[string]interface{}{
+		"container": serializers.SerializeContainer(cn),
+	}
+
+	return nil
 }
 
 func stop(cn *container.Container, h *host.Host, env *middleware.Env, c controllers.Helper, w http.ResponseWriter, r *http.Request) error {
@@ -402,7 +432,11 @@ func dropNamespace(freighterName string) string {
 	}
 }
 
+// prepareConfig takes a form (which has already been populated by
+// (request).ParseForm and a map of available volumes and returns a
+// ContainerConfig that can be used with freighterclient
 func prepareConfig(form url.Values, hv map[string]*volume.Volume) (*freighterclient.ContainerConfig, error) {
+	fmt.Printf("wtf %+v", form)
 	c := &freighterclient.ContainerConfig{}
 	if envs, ok := form["env[]"]; ok {
 		c.Env = envs
