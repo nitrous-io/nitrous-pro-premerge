@@ -7,6 +7,7 @@ github.com/ddollar/go-update #4733469d35539f410e0e84552944fa0df7e72c98
 github.com/fsouza/go-dockerclient #942ac38da9c51041240b1d20156eb38b0f085734
 github.com/gorilla/context #14f550f51af52180c2eefed15e5fd18d63c0a64a
 github.com/gorilla/mux #14cafe28513321476c73967a5a4f3454b6129c46
+github.com/gorilla/websocket #f940e88c0e4f2f58de44dc1788e05784b91332dd
 github.com/jmoiron/sqlx #65a94448495c675514bd4eb183b94f6dea516227
 github.com/kr/binarydist #9955b0ab8708602d411341e55fffd7e0700f86bd
 github.com/kr/pretty #088c856450c08c03eb32f7a6c221e6eefaa10e6f
