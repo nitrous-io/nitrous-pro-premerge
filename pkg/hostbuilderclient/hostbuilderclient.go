@@ -2,16 +2,23 @@ package hostbuilderclient
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 
 	"github.com/nitrous-io/hostbuilder"
 	"github.com/nitrous-io/nitrous-common/httpclient"
+)
+
+var (
+	ca  = os.Getenv("HOSTBUILDER_CA")
+	crt = os.Getenv("HOSTBUILDER_CERT")
+	key = os.Getenv("HOSTBUILDER_KEY")
 )
 
 type Config map[string]interface{}
@@ -27,14 +34,43 @@ func NewHostbuilder(url string) *Hostbuilder {
 	return &Hostbuilder{URL: url}
 }
 
-func (hb *Hostbuilder) defaultRequestHandler(path string, provider string, config *Config) (*hostbuilder.Response, error) {
+func tlsConfig() *tls.Config {
+	cert, err := tls.LoadX509KeyPair(crt, key)
+	if err != nil {
+		fmt.Errorf("Failed to load X509 keypair - %s & %s: %s", crt, key, err)
+	}
+
+	tlsConfig := &tls.Config{
+		NextProtos:   []string{"http/1.1"},
+		Certificates: []tls.Certificate{cert},
+	}
+
+	certPool := x509.NewCertPool()
+	caFile, err := ioutil.ReadFile(ca)
+	if err != nil {
+		fmt.Errorf("Failed to read CA certificate, %s: %s", ca, err)
+	}
+
+	certPool.AppendCertsFromPEM(caFile)
+	tlsConfig.RootCAs = certPool
+
+	return tlsConfig
+}
+
+func tlsClient() *httpclient.Client {
 	client := httpclient.New("")
-	// FIXME: make this a global setting
-	v, _ := strconv.ParseBool(os.Getenv("NO_SSL_VERIFY"))
+
+	config := tlsConfig()
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: v},
+		TLSClientConfig: config,
 	}
 	client.Client.Transport = tr
+
+	return client
+}
+
+func (hb *Hostbuilder) defaultRequestHandler(path string, provider string, config *Config) (*hostbuilder.Response, error) {
+	client := tlsClient()
 
 	p := url.Values{}
 	p.Set("provider", provider)
