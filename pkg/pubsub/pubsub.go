@@ -39,7 +39,6 @@ func (ps *PubSub) Subscribe(topics ...Topic) chan Message {
 
 // Unsubscribe unsubscribes a channel from 1 or more Topics. If no topic is
 // specified, it is unsubscribed from all topics.
-// If the channel is no longer subscribed to any Topic, it will be closed.
 func (ps *PubSub) Unsubscribe(ch chan Message, topics ...Topic) {
 	ps.Lock()
 	defer ps.Unlock()
@@ -55,15 +54,6 @@ func (ps *PubSub) Unsubscribe(ch chan Message, topics ...Topic) {
 	for _, topic := range topics {
 		delete(ps.registry[topic], ch)
 	}
-
-	for _, chMap := range ps.registry {
-		if _, ok := chMap[ch]; ok {
-			return
-		}
-	}
-
-	// Channel is no longer subscribed to any Topic so we close it.
-	close(ch)
 }
 
 // Close removes all subscribers from 1 or more Topics.

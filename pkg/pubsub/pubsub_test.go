@@ -47,13 +47,33 @@ var _ = Describe("pubsub", func() {
 			ps.Unsubscribe(ch, "topic-1")
 			ps.Publish("message 1", "topic-1")
 
-			_, ok := <-ch
-			Expect(ok).To(BeFalse())
+			select {
+			case v, ok := <-ch:
+				if !ok {
+					Fail("Channel unexpectedly closed")
+				}
+				Fail(fmt.Sprintf("Unexpected receive on unsubscribed channel: %v", v))
+			default:
+				// For non-blocking receive.
+			}
 
 			close(done)
 		})
 
-		It("unsubscribes from all topics and closes the channel if no topic is specified", func(done Done) {
+		It("unsubscribes from only the specified topics", func(done Done) {
+			ps := pubsub.New(1)
+			ch := ps.Subscribe("topic-1", "topic-2")
+
+			ps.Unsubscribe(ch, "topic-1")
+			ps.Publish("m1", "topic-1")
+			ps.Publish("m2", "topic-2")
+
+			Expect(<-ch).To(Equal("m2"))
+
+			close(done)
+		})
+
+		It("unsubscribes from all topics if no topic is specified", func(done Done) {
 			ps := pubsub.New(1)
 			ch := ps.Subscribe("topic-1", "topic-2")
 
@@ -61,24 +81,22 @@ var _ = Describe("pubsub", func() {
 			ps.Publish("message 1", "topic-1")
 			ps.Publish("message 2", "topic-2")
 
-			Expect(ch).To(BeClosed())
+			select {
+			case v, ok := <-ch:
+				if !ok {
+					Fail("Channel unexpectedly closed")
+				}
+				Fail(fmt.Sprintf("Unexpected receive on unsubscribed channel: %v", v))
+			default:
+				// For non-blocking receive.
+			}
 
 			close(done)
 		})
 
-		It("closes the channel if it is no longer subscribed to any topics", func() {
+		It("does not close the channel", func() {
 			ps := pubsub.New(1)
 			ch := ps.Subscribe("topic-1")
-			Expect(ch).NotTo(BeClosed())
-
-			ps.Unsubscribe(ch, "topic-1")
-
-			Expect(ch).To(BeClosed())
-		})
-
-		It("does not close the channel if it is still subscribed to 1 or more topics", func() {
-			ps := pubsub.New(1)
-			ch := ps.Subscribe("topic-1", "topic-2")
 			ps.Unsubscribe(ch, "topic-1")
 
 			Expect(ch).NotTo(BeClosed())
