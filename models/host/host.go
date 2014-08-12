@@ -39,8 +39,6 @@ const (
 type Host struct {
 	ID                 int64 `db:"id"`
 	UserID             int64 `db:"user_id"`
-	RegionID           int64 `db:"region_id"`
-	PlanID             int64 `db:"plan_id"`
 	ProviderTemplateID int64 `db:"provider_template_id"`
 
 	// Slug is used as a DNS label in the host's FQDN (thus limited to 63 chars).
@@ -53,15 +51,6 @@ type Host struct {
 	// ProviderIdentifier is the identifier used by the host's provider to
 	// uniquely identify this host.
 	ProviderIdentifier sql.NullString `db:"provider_identifier"`
-
-	// MaxContainers is the maximum number of containers that can be created on
-	// this host. This is copied over from the associated Plan so that it can
-	// be changed independently when necessary.
-	MaxContainers sql.NullInt64 `db:"max_containers"`
-
-	// Size is currently the name of the plan of this host. This is copied over
-	// from the associated Plan since size is often read.
-	Size sql.NullString `db:"size"`
 
 	TerminatedAt *time.Time `db:"terminated_at"`
 	CreatedAt    *time.Time `db:"created_at"`
@@ -134,11 +123,11 @@ func (h *Host) Insert(d db.QueryReceiver) error {
 		h.State = StateBorn
 	}
 	nstmt, err := d.PrepareNamed(`INSERT INTO hosts
-		(user_id, region_id, plan_id, provider_template_id, slug, name,
-			state, ip_address, provider_identifier, max_containers, size, freighterd_port)
+		(user_id, provider_template_id, slug,
+			name, state, ip_address, provider_identifier, freighterd_port)
 		VALUES
-		(:user_id, :region_id, :plan_id, :provider_template_id, :slug,
-		:name, :state, :ip_address, :provider_identifier, :max_containers, :size, :freighterd_port)
+		(:user_id, :provider_template_id, :slug,
+			:name, :state, :ip_address, :provider_identifier, :freighterd_port)
 		RETURNING *;`)
 	if err != nil {
 		return err
@@ -154,8 +143,8 @@ func (h *Host) UpdateState(d db.QueryReceiver, state string) error {
 
 func (h *Host) Update(d db.QueryReceiver) error {
 	nstmt, err := d.PrepareNamed(`UPDATE hosts
-		SET (name, state, ip_address, provider_identifier, max_containers, freighterd_port, updated_at)
-		= (:name, :state, :ip_address, :provider_identifier, :max_containers, :freighterd_port, now())
+		SET (name, state, ip_address, provider_identifier, freighterd_port, updated_at)
+		= (:name, :state, :ip_address, :provider_identifier, :freighterd_port, now())
 		WHERE id = :id
 		RETURNING *;`)
 	if err != nil {

@@ -76,8 +76,6 @@ var _ = Describe("models/registry", func() {
 			It("returns the registry records", func() {
 				h2 := &host.Host{
 					UserID:             hs.U.ID,
-					RegionID:           hs.R.ID,
-					PlanID:             hs.P.ID,
 					ProviderTemplateID: hs.PT.ID,
 				}
 				err := h2.Insert(db)

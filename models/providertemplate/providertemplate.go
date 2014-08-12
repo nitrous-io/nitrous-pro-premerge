@@ -10,8 +10,6 @@ import (
 
 type ProviderTemplate struct {
 	ID        int64         `db:"id"`
-	RegionID  int64         `db:"region_id"`
-	PlanID    int64         `db:"plan_id"`
 	Name      string        `db:"name"`
 	Provider  string        `db:"provider"`
 	Config    hstore.Hstore `db:"config"`
@@ -31,19 +29,10 @@ func FindByID(d db.QueryReceiver, id int64) (*ProviderTemplate, error) {
 	return pt, nil
 }
 
-func FindAllByRegionAndPlan(d db.QueryReceiver, regionID, planID int64) ([]ProviderTemplate, error) {
-	templates := []ProviderTemplate{}
-	err := d.Select(&templates, "SELECT * FROM provider_templates WHERE region_id = $1 AND plan_id = $2", regionID, planID)
-	if err != nil {
-		return nil, err
-	}
-	return templates, nil
-}
-
 func (pt *ProviderTemplate) Insert(d db.QueryReceiver) error {
 	nstmt, err := d.PrepareNamed(`INSERT INTO provider_templates
-		(region_id, plan_id, name, provider, config)
-		VALUES (:region_id, :plan_id, :name, :provider, :config)
+		(name, provider, config)
+		VALUES (:name, :provider, :config)
 		RETURNING *;`)
 	if err != nil {
 		return err

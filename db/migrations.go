@@ -275,5 +275,20 @@ func init() {
 				DROP TABLE certs;
 			`,
 		},
+		{
+			Version: "220",
+			Up: `
+				ALTER TABLE provider_templates
+					DROP COLUMN region_id,
+					DROP COLUMN plan_id;
+				ALTER TABLE hosts
+					DROP COLUMN region_id,
+					DROP COLUMN plan_id,
+					DROP COLUMN size,
+					DROP COLUMN max_containers;
+				DROP TABLE regions;
+				DROP TABLE plans;
+			`,
+		},
 	}
 }

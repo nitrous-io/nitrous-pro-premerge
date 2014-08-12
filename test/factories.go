@@ -6,15 +6,11 @@ import (
 
 	"github.com/nitrous-io/nitrous/db"
 	"github.com/nitrous-io/nitrous/models/host"
-	"github.com/nitrous-io/nitrous/models/plan"
 	"github.com/nitrous-io/nitrous/models/providertemplate"
-	"github.com/nitrous-io/nitrous/models/region"
 	"github.com/nitrous-io/nitrous/models/user"
 )
 
 type HostStack struct {
-	R  *region.Region
-	P  *plan.Plan
 	PT *providertemplate.ProviderTemplate
 	H  *host.Host
 	U  *user.User
@@ -25,7 +21,7 @@ type HostStack struct {
 var HostStackCount int
 
 // CreateHostStack returns a HostStack with created user,
-// region, plan, providertemplate, and host.
+// providertemplate, and host.
 // If any model fields in hs are present, they are used, otherwise
 // placeholder ones are created.
 // If any inserts fail, the entire transaction is rolled back.
@@ -68,37 +64,12 @@ func CreateHostStack(db *db.Database, hs *HostStack) (*HostStack, error) {
 		}
 	}
 
-	if hs.R == nil {
-		hs.R = &region.Region{Name: makeUnique("apse"), Description: "Southeast Asia"}
-	}
-
-	if hs.R.ID == 0 {
-		err = hs.R.Insert(tx)
-		if err != nil {
-			tx.Rollback()
-			return nil, err
-		}
-	}
-
-	if hs.P == nil {
-		hs.P = &plan.Plan{Name: makeUnique("micro"), MaxContainers: 1, Price: 500}
-	}
-	if hs.P.ID == 0 {
-		err = hs.P.Insert(tx)
-		if err != nil {
-			tx.Rollback()
-			return nil, err
-		}
-	}
-
 	if hs.PT == nil {
 		hs.PT = &providertemplate.ProviderTemplate{
 			Name:     "digital-ocean-1",
 			Provider: "digitalocean",
 		}
 	}
-	hs.PT.RegionID = hs.R.ID
-	hs.PT.PlanID = hs.P.ID
 
 	if hs.PT.ID == 0 {
 		err = hs.PT.Insert(tx)
@@ -122,8 +93,6 @@ func CreateHostStack(db *db.Database, hs *HostStack) (*HostStack, error) {
 		hs.H.ProviderIdentifier = sql.NullString{"host-0001", true}
 	}
 
-	hs.H.RegionID = hs.R.ID
-	hs.H.PlanID = hs.P.ID
 	hs.H.ProviderTemplateID = hs.PT.ID
 	hs.H.UserID = hs.U.ID
 

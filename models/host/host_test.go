@@ -63,13 +63,13 @@ var _ = Describe("models/host", func() {
 			Expect(err).To(BeNil())
 
 			_, err = db.Exec(`INSERT INTO hosts
-				(user_id, slug, region_id, plan_id, provider_template_id)
-				VALUES ($1, $2, $3, $4, $5);`,
-				u1.ID, "my-host-1", hs.R.ID, hs.P.ID, hs.PT.ID)
+				(user_id, slug, provider_template_id)
+				VALUES ($1, $2, $3);`,
+				u1.ID, "my-host-1", hs.PT.ID)
 			Expect(err).To(BeNil())
-			_, err = db.Exec(`INSERT INTO hosts (user_id, slug, region_id, plan_id, provider_template_id)
-				VALUES ($1, $2, $3, $4, $5);`,
-				u1.ID, "my-host-2", hs.R.ID, hs.P.ID, hs.PT.ID)
+			_, err = db.Exec(`INSERT INTO hosts (user_id, slug, provider_template_id)
+				VALUES ($1, $2, $3);`,
+				u1.ID, "my-host-2", hs.PT.ID)
 			Expect(err).To(BeNil())
 		})
 
@@ -244,8 +244,6 @@ var _ = Describe("models/host", func() {
 			h = &host.Host{
 				UserID:             u.ID,
 				Slug:               "my-host-1",
-				RegionID:           hs.R.ID,
-				PlanID:             hs.P.ID,
 				ProviderTemplateID: hs.PT.ID,
 			}
 			err = h.Insert(db)
@@ -284,8 +282,6 @@ var _ = Describe("models/host", func() {
 			h = &host.Host{
 				Slug:               "foo",
 				UserID:             hs.U.ID,
-				RegionID:           hs.R.ID,
-				PlanID:             hs.P.ID,
 				ProviderTemplateID: hs.PT.ID,
 				State:              host.StateRunning,
 			}
@@ -316,8 +312,6 @@ var _ = Describe("models/host", func() {
 			h = &host.Host{
 				Slug:               slug,
 				UserID:             hs.U.ID,
-				RegionID:           hs.R.ID,
-				PlanID:             hs.P.ID,
 				ProviderTemplateID: hs.PT.ID,
 				State:              host.StateRunning,
 				TerminatedAt:       nil,
@@ -331,7 +325,6 @@ var _ = Describe("models/host", func() {
 			h.State = host.StateRestarting
 			h.IPAddress = sql.NullString{"1.2.3.4", true}
 			h.ProviderIdentifier = sql.NullString{"digitalocean", true}
-			h.MaxContainers = sql.NullInt64{2, true}
 			h.FreighterdPort = sql.NullInt64{60000, true}
 			err := h.Update(db)
 			Expect(err).To(BeNil())
@@ -346,13 +339,10 @@ var _ = Describe("models/host", func() {
 			Expect(h2.State).To(Equal(host.StateRestarting))
 			Expect(h2.IPAddress.String).To(Equal("1.2.3.4"))
 			Expect(h2.ProviderIdentifier.String).To(Equal("digitalocean"))
-			Expect(h2.MaxContainers.Int64).To(Equal(int64(2)))
 			Expect(h2.FreighterdPort.Int64).To(Equal(int64(60000)))
 
 			// Unchanged fields.
 			Expect(h2.UserID).To(Equal(hs.U.ID))
-			Expect(h2.RegionID).To(Equal(hs.R.ID))
-			Expect(h2.PlanID).To(Equal(hs.P.ID))
 			Expect(h2.ProviderTemplateID).To(Equal(hs.PT.ID))
 		})
 
@@ -385,8 +375,6 @@ var _ = Describe("models/host", func() {
 			h = &host.Host{
 				Slug:               "foo",
 				UserID:             hs.U.ID,
-				RegionID:           hs.R.ID,
-				PlanID:             hs.P.ID,
 				ProviderTemplateID: hs.PT.ID,
 				State:              host.StateRunning,
 				TerminatedAt:       nil,
@@ -417,8 +405,6 @@ var _ = Describe("models/host", func() {
 			h = &host.Host{
 				UserID:             hs.U.ID,
 				Slug:               "my-host-1",
-				RegionID:           hs.R.ID,
-				PlanID:             hs.P.ID,
 				ProviderTemplateID: hs.PT.ID,
 			}
 			Expect(h.Validate(db)).To(BeNil())

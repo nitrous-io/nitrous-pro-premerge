@@ -8,9 +8,7 @@ import (
 	"github.com/lib/pq/hstore"
 	"github.com/nitrous-io/nitrous-common/logger"
 	"github.com/nitrous-io/nitrous/db"
-	"github.com/nitrous-io/nitrous/models/plan"
 	"github.com/nitrous-io/nitrous/models/providertemplate"
-	"github.com/nitrous-io/nitrous/models/region"
 	"github.com/nitrous-io/nitrous/models/user"
 )
 
@@ -26,7 +24,7 @@ func init() {
 
 type SeedFn func(db.QueryReceiver) error
 
-var seeds = []SeedFn{users, regions, plans, templates}
+var seeds = []SeedFn{users, templates}
 
 func main() {
 	dbURL := os.Getenv(DBEnvVar)
@@ -80,85 +78,25 @@ func users(d db.QueryReceiver) error {
 	return nil
 }
 
-func regions(d db.QueryReceiver) error {
-	ok, err := shouldSeed(d, "regions")
-	if err != nil || !ok {
-		return err
-	}
-	regions := []region.Region{
-		{Name: "sgp", Description: "Southeast Asia (Singapore)"},
-		{Name: "nyc", Description: "US East (New York)"},
-		{Name: "sfo", Description: "US West (San Francisco)"},
-		{Name: "ams", Description: "Europe (Amsterdam)"},
-		{Name: "lon", Description: "Europe (London)"},
-	}
-	for _, r := range regions {
-		err = r.Insert(d)
-		if err != nil {
-			return err
-		}
-		logr.Infof("Added region %+v", r)
-	}
-	return nil
-}
-
-func plans(d db.QueryReceiver) error {
-	ok, err := shouldSeed(d, "plans")
-	if err != nil || !ok {
-		return err
-	}
-	plans := []plan.Plan{
-		{Name: "nano", MaxContainers: 1, Price: 500},
-		{Name: "micro", MaxContainers: 2, Price: 1000},
-		{Name: "small", MaxContainers: 3, Price: 1500},
-		{Name: "medium", MaxContainers: 4, Price: 2000},
-		{Name: "large", MaxContainers: 5, Price: 2500},
-	}
-	for _, p := range plans {
-		err = p.Insert(d)
-		if err != nil {
-			return err
-		}
-		logr.Infof("Added plan %+v", p)
-	}
-	return nil
-}
-
 func templates(d db.QueryReceiver) error {
 	ok, err := shouldSeed(d, "provider_templates")
 	if err != nil || !ok {
 		return err
 	}
-	plans := []plan.Plan{}
-	err = d.Select(&plans, "SELECT * FROM plans")
+	pt := &providertemplate.ProviderTemplate{
+		Name:     "docker-template",
+		Provider: "docker",
+		Config: hstore.Hstore{
+			Map: map[string]sql.NullString{
+				"image": {"nitrousio/ubuntu-dind", true},
+			},
+		},
+	}
+	err := pt.Insert(d)
 	if err != nil {
 		return err
 	}
-	regions := []region.Region{}
-	err = d.Select(&regions, "SELECT * FROM regions")
-	if err != nil {
-		return err
-	}
-	for _, p := range plans {
-		for _, r := range regions {
-			pt := &providertemplate.ProviderTemplate{
-				Name:     fmt.Sprintf("docker-%s-%s", p.Name, r.Name),
-				Provider: "docker",
-				RegionID: r.ID,
-				PlanID:   p.ID,
-				Config: hstore.Hstore{
-					Map: map[string]sql.NullString{
-						"image": {"nitrousio/ubuntu-dind", true},
-					},
-				},
-			}
-			err := pt.Insert(d)
-			if err != nil {
-				return err
-			}
-			logr.Infof("Added provider template %+v", pt)
-		}
-	}
+	logr.Infof("Added provider template %+v", pt)
 	return nil
 }
 

@@ -4,9 +4,7 @@ import (
 	"testing"
 
 	"github.com/nitrous-io/nitrous/db"
-	"github.com/nitrous-io/nitrous/models/plan"
 	"github.com/nitrous-io/nitrous/models/providertemplate"
-	"github.com/nitrous-io/nitrous/models/region"
 	. "github.com/nitrous-io/nitrous/test"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -20,9 +18,6 @@ func Test(t *testing.T) {
 var _ = Describe("models/providertemplate", func() {
 	var (
 		db *db.Database
-		r  *region.Region
-		p1 *plan.Plan
-		p2 *plan.Plan
 	)
 
 	BeforeEach(func() {
@@ -30,20 +25,9 @@ var _ = Describe("models/providertemplate", func() {
 		db, err = TestDatabase("nitrous_test")
 		Expect(err).To(BeNil())
 
-		r = &region.Region{Name: "apse1", Description: "Southeast Asia"}
-		err = r.Insert(db)
+		_, err = db.Exec("INSERT INTO provider_templates (name, provider, config) values ($1, $2, $3);", "do-512MB", "digitalocean", "")
 		Expect(err).To(BeNil())
-
-		p1 = &plan.Plan{Name: "micro", MaxContainers: 1, Price: 500}
-		err = p1.Insert(db)
-		Expect(err).To(BeNil())
-		p2 = &plan.Plan{Name: "small", MaxContainers: 3, Price: 1000}
-		err = p2.Insert(db)
-		Expect(err).To(BeNil())
-
-		_, err = db.Exec("INSERT INTO provider_templates (region_id, plan_id, name, provider, config) values ($1, $2, $3, $4, $5);", r.ID, p1.ID, "do-512MB", "digitalocean", "")
-		Expect(err).To(BeNil())
-		_, err = db.Exec("INSERT INTO provider_templates (region_id, plan_id, name, provider, config) values ($1, $2, $3, $4, $5);", r.ID, p2.ID, "do-1GB", "digitalocean", "")
+		_, err = db.Exec("INSERT INTO provider_templates (name, provider, config) values ($1, $2, $3);", "do-1GB", "digitalocean", "")
 		Expect(err).To(BeNil())
 	})
 
@@ -57,7 +41,7 @@ var _ = Describe("models/providertemplate", func() {
 		var ptID int64
 
 		BeforeEach(func() {
-			err := db.QueryRow("SELECT id FROM provider_templates WHERE region_id = $1 AND plan_id = $2 AND provider = $3", r.ID, p1.ID, "digitalocean").Scan(&ptID)
+			err := db.QueryRow("SELECT id FROM provider_templates").Scan(&ptID)
 			Expect(err).To(BeNil())
 		})
 
@@ -88,47 +72,12 @@ var _ = Describe("models/providertemplate", func() {
 		})
 	})
 
-	Describe("FindAllByRegionAndPlan()", func() {
-		Context("when a provider template record with a given region ID and plan ID exists", func() {
-			It("returns the provider template record", func() {
-				templates, err := providertemplate.FindAllByRegionAndPlan(db, r.ID, p1.ID)
-				Expect(err).To(BeNil())
-				Expect(templates).To(HaveLen(1))
-
-				Expect(templates[0].ID).NotTo(BeZero())
-				Expect(templates[0].RegionID).To(Equal(r.ID))
-				Expect(templates[0].PlanID).To(Equal(p1.ID))
-				Expect(templates[0].Name).To(Equal("do-512MB"))
-				Expect(templates[0].Provider).To(Equal("digitalocean"))
-			})
-		})
-
-		Context("when a provider template record with a given region ID and plan ID does not exist", func() {
-			It("returns nil", func() {
-				templates, err := providertemplate.FindAllByRegionAndPlan(db, 9001, 9002)
-				Expect(err).To(BeNil())
-				Expect(templates).To(HaveLen(0))
-			})
-		})
-
-		Context("when some error happens", func() {
-			It("returns error", func() {
-				db.Close()
-				templates, err := providertemplate.FindAllByRegionAndPlan(db, r.ID, p1.ID)
-				Expect(templates).To(BeEmpty())
-				Expect(err).NotTo(BeNil())
-			})
-		})
-	})
-
 	Describe("Insert()", func() {
 		var pt *providertemplate.ProviderTemplate
 
 		BeforeEach(func() {
 			var err error
 			pt = &providertemplate.ProviderTemplate{
-				RegionID: r.ID,
-				PlanID:   p1.ID,
 				Name:     "ec2-micro-apse1",
 				Provider: "ec2",
 			}
@@ -141,8 +90,6 @@ var _ = Describe("models/providertemplate", func() {
 			Expect(err).To(BeNil())
 			Expect(pt2).NotTo(BeNil())
 			Expect(pt2.ID).NotTo(BeZero())
-			Expect(pt2.RegionID).To(Equal(r.ID))
-			Expect(pt2.PlanID).To(Equal(p1.ID))
 			Expect(pt2.Name).To(Equal("ec2-micro-apse1"))
 			Expect(pt2.Provider).To(Equal("ec2"))
 		})

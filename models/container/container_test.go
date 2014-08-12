@@ -9,9 +9,7 @@ import (
 	"github.com/nitrous-io/nitrous/models/container"
 	"github.com/nitrous-io/nitrous/models/cvolume"
 	"github.com/nitrous-io/nitrous/models/host"
-	"github.com/nitrous-io/nitrous/models/plan"
 	"github.com/nitrous-io/nitrous/models/providertemplate"
-	"github.com/nitrous-io/nitrous/models/region"
 	"github.com/nitrous-io/nitrous/models/user"
 	"github.com/nitrous-io/nitrous/models/volume"
 	. "github.com/nitrous-io/nitrous/test"
@@ -29,8 +27,6 @@ var _ = Describe("models/container", func() {
 		db *db.Database
 		u  *user.User
 		h  *host.Host
-		r  *region.Region
-		p  *plan.Plan
 		pt *providertemplate.ProviderTemplate
 	)
 
@@ -47,17 +43,7 @@ var _ = Describe("models/container", func() {
 		err = u.Insert(db)
 		Expect(err).To(BeNil())
 
-		r = &region.Region{Name: "apse1", Description: "Southeast Asia"}
-		err = r.Insert(db)
-		Expect(err).To(BeNil())
-
-		p = &plan.Plan{Name: "micro", MaxContainers: 1, Price: 500}
-		err = p.Insert(db)
-		Expect(err).To(BeNil())
-
 		pt = &providertemplate.ProviderTemplate{
-			RegionID: r.ID,
-			PlanID:   p.ID,
 			Name:     "digital-ocean-1",
 			Provider: "digitalocean",
 		}
@@ -67,8 +53,6 @@ var _ = Describe("models/container", func() {
 		h = &host.Host{
 			UserID:             u.ID,
 			Slug:               "my-host-1",
-			RegionID:           r.ID,
-			PlanID:             p.ID,
 			ProviderTemplateID: pt.ID,
 		}
 		err = h.Insert(db)
@@ -204,8 +188,6 @@ var _ = Describe("models/container", func() {
 				h2 = &host.Host{
 					UserID:             u.ID,
 					Slug:               "my-host-2",
-					RegionID:           r.ID,
-					PlanID:             p.ID,
 					ProviderTemplateID: pt.ID,
 				}
 				err = h2.Insert(db)
@@ -376,8 +358,6 @@ var _ = Describe("models/container", func() {
 					h2 := &host.Host{
 						UserID:             u.ID,
 						Slug:               "my-host-2",
-						RegionID:           r.ID,
-						PlanID:             p.ID,
 						ProviderTemplateID: pt.ID,
 					}
 					err := h2.Insert(db)
