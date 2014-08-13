@@ -70,12 +70,12 @@ type Host struct {
 	*ProviderTemplate
 }
 
-func FindAllByUser(db *db.Database, user *user.User) ([]Host, error) {
+func FindAllByUser(db *db.Database, user *user.User) ([]*Host, error) {
 	return findAllByUserID(db, user.ID)
 }
 
-func findAllByUserID(db *db.Database, userID int64) ([]Host, error) {
-	hosts := []Host{}
+func findAllByUserID(db *db.Database, userID int64) ([]*Host, error) {
+	hosts := []*Host{}
 	err := db.Select(&hosts, "SELECT * FROM hosts WHERE user_id = $1 AND terminated_at IS NULL ORDER BY id;", userID)
 	if err != nil {
 		return nil, err
