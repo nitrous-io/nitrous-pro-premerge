@@ -56,4 +56,26 @@ var _ = Describe("container serializer", func() {
 			}`))
 		})
 	})
+
+	Describe("SerializeContainers", func() {
+		It("serializes to JSON", func() {
+			c := serializers.SerializeContainers([]*container.Container{model})
+			b, err := json.Marshal(c)
+			Expect(err).To(BeNil())
+			Expect(b).To(MatchJSON(`[{
+				"id": 10,
+				"cid": "deadbeef",
+				"user_id": 11,
+				"host_id": 12,
+				"image": "busybox",
+				"slug": "railsbox-10",
+				"name": "Rails dev box",
+				"ip_address": "1.2.3.4",
+				"state": "running",
+				"terminated_at": "2013-11-03T00:00:00Z",
+				"created_at": "2013-11-01T00:00:00Z",
+				"updated_at": "2013-11-02T00:00:00Z"
+			}]`))
+		})
+	})
 })
