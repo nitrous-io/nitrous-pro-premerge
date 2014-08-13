@@ -427,8 +427,6 @@ var _ = Describe("controllers/containers", func() {
 						IPAddress: sql.NullString{},
 					},
 					U:  u,
-					R:  hs.R,
-					P:  hs.P,
 					PT: hs.PT,
 				})
 				Expect(err).To(BeNil())
@@ -488,8 +486,6 @@ var _ = Describe("controllers/containers", func() {
 						IPAddress: sql.NullString{},
 					},
 					U:  u,
-					R:  hs.R,
-					P:  hs.P,
 					PT: hs.PT,
 				})
 				Expect(err).To(BeNil())

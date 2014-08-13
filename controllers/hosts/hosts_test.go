@@ -23,8 +23,6 @@ import (
 	"github.com/nitrous-io/nitrous/models/container"
 	"github.com/nitrous-io/nitrous/models/host"
 	"github.com/nitrous-io/nitrous/models/keypairs"
-	"github.com/nitrous-io/nitrous/models/plan"
-	"github.com/nitrous-io/nitrous/models/region"
 	"github.com/nitrous-io/nitrous/models/token"
 	"github.com/nitrous-io/nitrous/models/user"
 
@@ -122,7 +120,6 @@ var _ = Describe("controllers/hosts", func() {
 						Slug:           "foo",
 						IPAddress:      sql.NullString{"1.2.3.4", true},
 						FreighterdPort: sql.NullInt64{64000, true},
-						Size:           sql.NullString{"micro", true},
 						State:          host.StateRunning,
 					},
 					U: u,
@@ -134,7 +131,6 @@ var _ = Describe("controllers/hosts", func() {
 						Slug:           "bar",
 						IPAddress:      sql.NullString{"2.4.6.8", true},
 						FreighterdPort: sql.NullInt64{64001, true},
-						Size:           sql.NullString{"large", true},
 						State:          host.StateRunning,
 					},
 					U: u,
@@ -158,7 +154,6 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(j.Hosts[0].Slug).To(Equal("foo"))
 				Expect(j.Hosts[0].IPAddress).To(Equal("1.2.3.4"))
 				Expect(j.Hosts[0].FreighterdPort).To(Equal(int64(64000)))
-				Expect(j.Hosts[0].Size).To(Equal("micro"))
 				Expect(j.Hosts[0].State).To(Equal(host.StateRunning))
 				Expect(j.Hosts[0].Hostname).To(Equal("foo.nitrouspro.com"))
 				Expect(j.Hosts[0].CreatedAt).NotTo(BeNil())
@@ -168,7 +163,6 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(j.Hosts[1].Slug).To(Equal("bar"))
 				Expect(j.Hosts[1].IPAddress).To(Equal("2.4.6.8"))
 				Expect(j.Hosts[1].FreighterdPort).To(Equal(int64(64001)))
-				Expect(j.Hosts[1].Size).To(Equal("large"))
 				Expect(j.Hosts[1].State).To(Equal(host.StateRunning))
 				Expect(j.Hosts[1].Hostname).To(Equal("bar.nitrouspro.com"))
 				Expect(j.Hosts[1].CreatedAt).NotTo(BeNil())
@@ -215,14 +209,6 @@ var _ = Describe("controllers/hosts", func() {
 
 			if _, ok = o["slug"]; !ok {
 				o["slug"] = "honeybadger"
-			}
-
-			if _, ok = o["size"]; !ok {
-				o["size"] = hs.P.Name
-			}
-
-			if _, ok = o["region"]; !ok {
-				o["region"] = hs.R.Name
 			}
 
 			if _, ok = o["name"]; !ok {
@@ -342,7 +328,6 @@ var _ = Describe("controllers/hosts", func() {
 					Expect(h.IPAddress.String).To(Equal("0.0.0.0"))
 					Expect(h.State).To(Equal(host.StateRunning))
 					Expect(h.MaxContainers.Int64).To(Equal(hs.P.MaxContainers))
-					Expect(h.Size.String).To(Equal(hs.P.Name))
 					Expect(h.ProviderIdentifier.String).To(Equal("abcd1234"))
 					Expect(h.FreighterdPort.Int64).To(Equal(int64(65333)))
 				})
@@ -374,7 +359,6 @@ var _ = Describe("controllers/hosts", func() {
 					Expect(j.Host.Slug).To(Equal("honeybadger"))
 					Expect(j.Host.IPAddress).To(Equal("0.0.0.0"))
 					Expect(j.Host.FreighterdPort).To(Equal(int64(65333)))
-					Expect(j.Host.Size).To(Equal(hs.P.Name))
 					Expect(j.Host.State).To(Equal(host.StateRunning))
 					Expect(j.Host.Hostname).To(Equal("honeybadger.nitrouspro.com"))
 					Expect(j.Host.CreatedAt).NotTo(BeNil())
@@ -482,7 +466,6 @@ var _ = Describe("controllers/hosts", func() {
 					Slug:           "foo",
 					IPAddress:      sql.NullString{"1.2.3.4", true},
 					FreighterdPort: sql.NullInt64{64000, true},
-					Size:           sql.NullString{"large", true},
 					State:          host.StateRunning,
 				},
 				R: &region.Region{Name: "use", Description: "US East"},
@@ -526,7 +509,6 @@ var _ = Describe("controllers/hosts", func() {
 			Expect(j.Host.Slug).To(Equal("foo"))
 			Expect(j.Host.IPAddress).To(Equal("1.2.3.4"))
 			Expect(j.Host.FreighterdPort).To(Equal(int64(64000)))
-			Expect(j.Host.Size).To(Equal("large"))
 			Expect(j.Host.State).To(Equal(host.StateRunning))
 			Expect(j.Host.Hostname).To(Equal("foo.nitrouspro.com"))
 			Expect(j.Host.RegionID).To(Equal(hs.R.ID))
@@ -679,7 +661,6 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(j.Host.Slug).To(Equal("honeybadger"))
 				Expect(j.Host.IPAddress).To(Equal(""))
 				Expect(j.Host.FreighterdPort).To(Equal(int64(0)))
-				Expect(j.Host.Size).To(Equal(""))
 				Expect(j.Host.State).To(Equal(host.StateTerminated))
 				Expect(j.Host.Hostname).To(Equal("honeybadger.nitrouspro.com"))
 				Expect(j.Host.RegionID).To(Equal(hs.R.ID))

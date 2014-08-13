@@ -16,21 +16,15 @@ import (
 	"github.com/nitrous-io/nitrous/models/container"
 	"github.com/nitrous-io/nitrous/models/host"
 	"github.com/nitrous-io/nitrous/models/keypairs"
-	"github.com/nitrous-io/nitrous/models/plan"
 	"github.com/nitrous-io/nitrous/models/providertemplate"
-	"github.com/nitrous-io/nitrous/models/region"
 	"github.com/nitrous-io/nitrous/pkg/hostbuilderclient"
 	"github.com/nitrous-io/nitrous/pkg/httperror"
 	"github.com/nitrous-io/nitrous/serializers"
 )
 
 var (
-	ErrSizeRequired             = httperror.New(http.StatusBadRequest, "invalid_request", "size is required")
+	ErrProvidertemplateNotFound = httperror.New(http.StatusBadRequest, "invalid_request", "no matching provider found")
 	ErrSlugRequired             = httperror.New(http.StatusBadRequest, "invalid_request", "slug is required")
-	ErrRegionRequired           = httperror.New(http.StatusBadRequest, "invalid_request", "region is required")
-	ErrPlanNotFound             = httperror.New(http.StatusBadRequest, "invalid_request", "no matching plan found for the given size")
-	ErrRegionNotFound           = httperror.New(http.StatusBadRequest, "invalid_request", "no matching region found for the given name")
-	ErrProvidertemplateNotFound = httperror.New(http.StatusBadRequest, "invalid_request", "no matching templates found for the given plan and regions combination")
 	ErrHostStartInvalidState    = httperror.New(http.StatusBadRequest, "invalid_state", "host is not stopped")
 	ErrHostStopInvalidState     = httperror.New(http.StatusBadRequest, "invalid_state", "host is not running")
 	ErrHostRestartInvalidState  = httperror.New(http.StatusBadRequest, "invalid_state", "host is not running")
@@ -83,44 +77,20 @@ func Index(env *middleware.Env, c controllers.Helper, w http.ResponseWriter, r *
 func Create(env *middleware.Env, c controllers.Helper, w http.ResponseWriter, r *http.Request) error {
 	db := c.DB()
 
-	size := r.FormValue("size")
-	if size == "" {
-		return ErrSizeRequired
-	}
-
 	slug := r.FormValue("slug")
 	if slug == "" {
 		return ErrSlugRequired
 	}
-
-	regionName := r.FormValue("region")
-	if regionName == "" {
-		return ErrRegionRequired
-	}
-
 	name := r.FormValue("name")
 	if name == "" {
 		name = slug
 	}
-
-	// TODO: check if user account is eligible to create hosts (has a credit card on file)
-	pl, err := plan.FindByName(db, size)
-	if err != nil {
-		return err
-	}
-	if pl == nil {
-		return ErrPlanNotFound
+	provider := r.FormValue("provider")
+	if provider == "" {
+		provider = providertemplate.DefaultProvider
 	}
 
-	rg, err := region.FindByName(db, regionName)
-	if err != nil {
-		return err
-	}
-	if rg == nil {
-		return ErrRegionNotFound
-	}
-
-	pts, err := providertemplate.FindAllByRegionAndPlan(db, rg.ID, pl.ID)
+	pts, err := providertemplate.FindAllByProvider(db, provider)
 	if err != nil {
 		return err
 	}
@@ -138,13 +108,9 @@ func Create(env *middleware.Env, c controllers.Helper, w http.ResponseWriter, r 
 
 	h := &host.Host{
 		UserID:             env.User.ID,
-		RegionID:           rg.ID,
-		PlanID:             pl.ID,
 		ProviderTemplateID: pt.ID,
 		Slug:               slug,
 		Name:               sql.NullString{name, true},
-		MaxContainers:      sql.NullInt64{pl.MaxContainers, true},
-		Size:               sql.NullString{size, true},
 		State:              host.StateBorn,
 	}
 

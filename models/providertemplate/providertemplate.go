@@ -8,6 +8,8 @@ import (
 	"github.com/nitrous-io/nitrous/db"
 )
 
+const DefaultProvider = "docker"
+
 type ProviderTemplate struct {
 	ID        int64         `db:"id"`
 	Name      string        `db:"name"`
@@ -27,6 +29,15 @@ func FindByID(d db.QueryReceiver, id int64) (*ProviderTemplate, error) {
 		return nil, err
 	}
 	return pt, nil
+}
+
+func FindAllByProvider(d db.QueryReceiver, provider string) ([]ProviderTemplate, error) {
+	pts := []ProviderTemplate{}
+	err := d.Select(&pts, "SELECT * FROM provider_templates WHERE provider = $1", provider)
+	if err != nil {
+		return nil, err
+	}
+	return pts, nil
 }
 
 func (pt *ProviderTemplate) Insert(d db.QueryReceiver) error {

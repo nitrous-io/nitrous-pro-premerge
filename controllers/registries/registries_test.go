@@ -295,11 +295,11 @@ var _ = Describe("controllers/registries", func() {
 						})
 
 						It("creates a registry record for the user and host", func() {
-							regions, err := registry.FindAllByUserIDAndHostID(db, hs.U.ID, hs.H.ID)
+							rs, err := registry.FindAllByUserIDAndHostID(db, hs.U.ID, hs.H.ID)
 							Expect(err).To(BeNil())
-							Expect(len(regions)).To(Equal(1))
+							Expect(rs).To(HaveLen(1))
 
-							r := regions[0]
+							r := rs[0]
 							Expect(r.Username).To(Equal("dockeruser"))
 							Expect(r.Email).To(Equal("dockeruser@example.com"))
 							Expect(r.URL).To(Equal("hub.example.com"))
@@ -317,9 +317,9 @@ var _ = Describe("controllers/registries", func() {
 						})
 
 						It("does not create a registry record for the user and host", func() {
-							regions, err := registry.FindAllByUserIDAndHostID(db, hs.U.ID, hs.H.ID)
+							rs, err := registry.FindAllByUserIDAndHostID(db, hs.U.ID, hs.H.ID)
 							Expect(err).To(BeNil())
-							Expect(len(regions)).To(Equal(0))
+							Expect(rs).To(BeEmpty())
 						})
 
 						It("informs user that login failed", func() {
