@@ -49,49 +49,44 @@ var (
 func Index(env *middleware.Env, c controllers.Helper, w http.ResponseWriter, r *http.Request) error {
 	db := c.DB()
 	var err error
+	var hosts []host.Host
 
-	hSlug := r.FormValue("host")
-	hosts := []host.Host{}
-	containersResp := []*serializers.Container{}
-
-	// If no host is provided, then get all hosts belonging to the user
-	// and get all containers from all hosts
-	if hSlug != "" {
-		h, err := host.FindByUserAndSlug(db, env.User, hSlug)
+	if slug := r.FormValue("host"); slug != "" {
+		h, err := host.FindByUserAndSlug(db, env.User, slug)
 		if err != nil {
 			return err
 		}
-
-		if h != nil {
-			hosts = []host.Host{*h}
-		} else {
+		if h == nil {
 			return errHostNotFound
 		}
+
+		hosts = []host.Host{*h}
 	} else {
+		// If no host is specified, return all containers from all hosts.
 		hosts, err = host.FindAllByUser(db, env.User)
 		if err != nil {
 			return err
 		}
 	}
 
+	containersResp := []*serializers.Container{}
 	for _, h := range hosts {
-		liveContainers, freighterErr := freighterList(db, &h)
-
 		savedContainers, err := container.FindAllByHostID(db, h.ID)
 		if err != nil {
 			return err
 		}
 
-		if freighterErr != nil {
-			// If we can't get through to the host, then pass them along without the Freighter specific
-			// info to the frontend
-			if freighterErr == controllers.ErrHostNotRunning || freighterErr == controllers.ErrHostIPUnknown {
+		liveContainers, err := freighterList(db, &h)
+		if err != nil {
+			// If we can't get through to the host, return only container data
+			// from the database.
+			if err == controllers.ErrHostNotRunning || err == controllers.ErrHostIPUnknown {
 				for _, sc := range savedContainers {
 					containersResp = append(containersResp, serializers.SerializeContainer(sc))
 				}
-			} else {
-				return freighterErr
+				continue
 			}
+			return err
 		}
 
 		for _, lc := range liveContainers {
@@ -130,11 +125,7 @@ func freighterList(db db.QueryReceiver, h *host.Host) ([]*freighterclient.Contai
 	if err != nil {
 		return nil, err
 	}
-	liveContainers, err := cl.List()
-	if err != nil {
-		return nil, err
-	}
-	return liveContainers, nil
+	return cl.List()
 }
 
 func create(h runningHost, env *middleware.Env, c controllers.Helper, w http.ResponseWriter, r *http.Request) error {
