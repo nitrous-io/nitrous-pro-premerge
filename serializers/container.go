@@ -38,3 +38,11 @@ func SerializeContainer(c *container.Container) *Container {
 		TerminatedAt: c.TerminatedAt,
 	}
 }
+
+func SerializeContainers(containers []*container.Container) []*Container {
+	ret := make([]*Container, len(containers))
+	for i, c := range containers {
+		ret[i] = SerializeContainer(c)
+	}
+	return ret
+}

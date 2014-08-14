@@ -51,76 +51,85 @@ var (
 
 func Index(env *middleware.Env, c controllers.Helper, w http.ResponseWriter, r *http.Request) error {
 	db := c.DB()
-	var err error
+	var hosts []*host.Host
 
-	hSlug := r.FormValue("host")
-	hosts := []host.Host{}
-	containersResp := []*serializers.Container{}
-
-	// If no host is provided, then get all hosts belonging to the user
-	// and get all containers from all hosts
-	if hSlug != "" {
-		h, err := host.FindByUserAndSlug(db, env.User, hSlug)
+	if slug := r.FormValue("host"); slug != "" {
+		h, err := host.FindByUserAndSlug(db, env.User, slug)
 		if err != nil {
 			return err
 		}
-
-		if h != nil {
-			hosts = []host.Host{*h}
-		} else {
+		if h == nil {
 			return errHostNotFound
 		}
+
+		hosts = []*host.Host{h}
 	} else {
+		// If no host is specified, return all containers from all hosts.
+		var err error
 		hosts, err = host.FindAllByUser(db, env.User)
 		if err != nil {
 			return err
 		}
 	}
 
+	quit := make(chan struct{})
+	out := make(chan hostresult, len(hosts))
+
 	for _, h := range hosts {
-		liveContainers, freighterErr := freighterList(db, &h)
+		go getHostContainers(db, h, out, quit)
+	}
 
-		savedContainers, err := container.FindAllByHostID(db, h.ID)
-		if err != nil {
-			return err
+	containers := []*container.Container{}
+	for _ = range hosts {
+		hres := <-out
+		if hres.err != nil {
+			close(quit)
+			return hres.err
 		}
-
-		if freighterErr != nil {
-			// If we can't get through to the host, then pass them along without the Freighter specific
-			// info to the frontend
-			if freighterErr == controllers.ErrHostNotRunning || freighterErr == controllers.ErrHostIPUnknown {
-				for _, sc := range savedContainers {
-					containersResp = append(containersResp, serializers.SerializeContainer(sc))
-				}
-			} else {
-				return freighterErr
-			}
-		}
-
-		for _, lc := range liveContainers {
-			var savedContainer *container.Container
-			for _, sc := range savedContainers {
-				if sc.CID == lc.ID {
-					savedContainer = sc
-					break
-				}
-			}
-			var cn *container.Container
-			if savedContainer != nil {
-				cn = hydrateContainer(savedContainer, lc, &h)
-			} else {
-				cn = mkContainer(lc, &h)
-			}
-
-			containersResp = append(containersResp, serializers.SerializeContainer(cn))
-		}
+		containers = append(containers, hres.containers...)
 	}
 
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
-		"containers": containersResp,
+		"containers": serializers.SerializeContainers(containers),
 	}
 	return nil
+}
+
+type hostresult struct {
+	containers []*container.Container
+	err        error
+}
+
+func getHostContainers(db db.QueryReceiver, h *host.Host, out chan<- hostresult, quit <-chan struct{}) {
+	select {
+	case <-quit:
+		return
+	default:
+		lres := make(chan listresult, 1)
+		go freighterList(db, h, lres, quit)
+
+		saved, err := container.FindAllByHostID(db, h.ID)
+		if err != nil {
+			out <- hostresult{err: err}
+			return
+		}
+
+		live := <-lres
+		if live.err != nil {
+			// If we can't get through to the host, return only container data
+			// from the database.
+			switch live.err {
+			case controllers.ErrHostNotRunning, controllers.ErrHostIPUnknown:
+				out <- hostresult{containers: saved}
+			default:
+				out <- hostresult{err: live.err}
+			}
+			return
+		}
+
+		out <- hostresult{containers: mergeContainers(live.containers, saved, h)}
+	}
 }
 
 type listresult struct {
@@ -128,16 +137,46 @@ type listresult struct {
 	err        error
 }
 
-func freighterList(db db.QueryReceiver, h *host.Host) ([]*freighterclient.Container, error) {
-	cl, err := controllers.NewFreighterClient(db, h)
-	if err != nil {
-		return nil, err
+func freighterList(db db.QueryReceiver, h *host.Host, out chan<- listresult, quit <-chan struct{}) {
+	select {
+	case <-quit:
+		return
+	default:
+		cl, err := controllers.NewFreighterClient(db, h)
+		if err != nil {
+			out <- listresult{err: err}
+			return
+		}
+		liveContainers, err := cl.List()
+		if err != nil {
+			out <- listresult{err: err}
+			return
+		}
+		out <- listresult{containers: liveContainers}
 	}
-	liveContainers, err := cl.List()
-	if err != nil {
-		return nil, err
+}
+
+func mergeContainers(live []*freighterclient.Container, saved []*container.Container, h *host.Host) []*container.Container {
+	res := make([]*container.Container, 0, len(live))
+	for _, lc := range live {
+		var savedContainer *container.Container
+		for _, sc := range saved {
+			if sc.CID == lc.ID {
+				savedContainer = sc
+				break
+			}
+		}
+
+		var cn *container.Container
+		if savedContainer != nil {
+			cn = hydrateContainer(savedContainer, lc)
+		} else {
+			cn = mkContainer(lc, h)
+		}
+
+		res = append(res, cn)
 	}
-	return liveContainers, nil
+	return res
 }
 
 func create(h runningHost, env *middleware.Env, c controllers.Helper, w http.ResponseWriter, r *http.Request) error {
@@ -284,7 +323,7 @@ func show(cn *container.Container, h *host.Host, env *middleware.Env, c controll
 	if err != nil {
 		return err
 	}
-	cn = hydrateContainer(cn, liveContainer, h)
+	cn = hydrateContainer(cn, liveContainer)
 
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
@@ -326,7 +365,7 @@ func performControlAction(fn actionFn, cn *container.Container, h *host.Host, en
 		return err
 	}
 
-	cn = hydrateContainer(cn, liveContainer, h)
+	cn = hydrateContainer(cn, liveContainer)
 
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
@@ -353,7 +392,7 @@ func destroy(cn *container.Container, h *host.Host, env *middleware.Env, c contr
 	if err != nil {
 		return err
 	}
-	cn = hydrateContainer(cn, liveContainer, h)
+	cn = hydrateContainer(cn, liveContainer)
 
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
@@ -402,7 +441,7 @@ func requiresRunningHost(fn hostFn) func(h *host.Host, env *middleware.Env, c co
 	}
 }
 
-func hydrateContainer(c *container.Container, fc *freighterclient.Container, h *host.Host) *container.Container {
+func hydrateContainer(c *container.Container, fc *freighterclient.Container) *container.Container {
 	c.CID = fc.ID
 	c.Image = fc.Image
 	c.Slug = dropNamespace(fc.Name)
