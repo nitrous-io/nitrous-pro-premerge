@@ -3,6 +3,7 @@ package container
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"regexp"
 	"time"
 
@@ -31,6 +32,8 @@ type Container struct {
 	Slug   string         `db:"slug"`
 	Name   sql.NullString `db:"name"`
 
+	HostSlug string `db:"host_slug"`
+
 	TerminatedAt *time.Time `db:"terminated_at"`
 	TouchedAt    *time.Time `db:"touched_at"`
 	CreatedAt    *time.Time `db:"created_at"`
@@ -42,7 +45,7 @@ type Container struct {
 
 func FindByUserAndSlug(d db.QueryReceiver, user *user.User, slug string) (*Container, error) {
 	c := &Container{}
-	err := d.Get(c, `SELECT * FROM containers WHERE user_id = $1 AND slug = $2 AND containers.terminated_at IS NULL;`, user.ID, slug)
+	err := d.Get(c, generateQuery("containers.user_id = $1 AND containers.slug = $2"), user.ID, slug)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -54,7 +57,7 @@ func FindByUserAndSlug(d db.QueryReceiver, user *user.User, slug string) (*Conta
 
 func FindByCID(d db.QueryReceiver, cid string) (*Container, error) {
 	c := &Container{}
-	err := d.Get(c, `SELECT * FROM containers WHERE cid = $1 AND terminated_at IS NULL;`, cid)
+	err := d.Get(c, generateQuery("containers.cid = $1"), cid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -66,11 +69,18 @@ func FindByCID(d db.QueryReceiver, cid string) (*Container, error) {
 
 func FindAllByHostID(d db.QueryReceiver, hostID int64) ([]*Container, error) {
 	containers := []*Container{}
-	err := d.Select(&containers, `SELECT * FROM containers WHERE host_id = $1 AND terminated_at IS NULL;`, hostID)
+	err := d.Select(&containers, generateQuery("containers.host_id = $1"), hostID)
 	if err != nil {
 		return nil, err
 	}
 	return containers, nil
+}
+
+func generateQuery(condition string) string {
+	return fmt.Sprintf(`SELECT containers.*, hosts.slug AS host_slug
+			FROM containers
+			INNER JOIN hosts ON containers.host_id = hosts.id
+			WHERE %s AND containers.terminated_at IS NULL;`, condition)
 }
 
 func DeleteAllByHostID(d db.QueryReceiver, hostID int64) error {

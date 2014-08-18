@@ -28,6 +28,7 @@ var _ = Describe("container serializer", func() {
 			Name:         sql.NullString{"Rails dev box", true},
 			IPAddress:    "1.2.3.4",
 			State:        "running",
+			HostSlug:     "gold-storms-end-host-19",
 			TouchedAt:    &touchedAt, // Not serialized.
 			TerminatedAt: &terminatedAt,
 			CreatedAt:    &createdAt,
@@ -49,6 +50,7 @@ var _ = Describe("container serializer", func() {
 				"slug": "railsbox-10",
 				"name": "Rails dev box",
 				"ip_address": "1.2.3.4",
+				"host_slug": "gold-storms-end-host-19",
 				"state": "running",
 				"terminated_at": "2013-11-03T00:00:00Z",
 				"created_at": "2013-11-01T00:00:00Z",

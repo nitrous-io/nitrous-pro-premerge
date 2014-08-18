@@ -95,6 +95,7 @@ var _ = Describe("models/container", func() {
 				Expect(c.HostID).To(Equal(h.ID))
 				Expect(c.CID).To(Equal("deadbeef"))
 				Expect(c.Slug).To(Equal("my-1st-container"))
+				Expect(c.HostSlug).To(Equal(h.Slug))
 			})
 		})
 
@@ -136,6 +137,7 @@ var _ = Describe("models/container", func() {
 				Expect(c.CID).To(Equal("deadbeef"))
 				Expect(c.Image).To(Equal("nitrous-base"))
 				Expect(c.Slug).To(Equal("my-1st-container"))
+				Expect(c.HostSlug).To(Equal(h.Slug))
 			})
 
 			Context("when container has been terminated", func() {
@@ -180,6 +182,7 @@ var _ = Describe("models/container", func() {
 				Expect(containers[0].CID).To(Equal("deadbeef"))
 				Expect(containers[0].Image).To(Equal("nitrous-base"))
 				Expect(containers[0].Slug).To(Equal("my-1st-container"))
+				Expect(containers[0].HostSlug).To(Equal(h.Slug))
 			})
 
 			Context("when some containers have been terminated", func() {
@@ -452,7 +455,7 @@ var _ = Describe("models/container", func() {
 			c2 := &container.Container{}
 			err = db.QueryRowx("SELECT * FROM containers WHERE id = $1", c.ID).StructScan(c2)
 			Expect(err).To(BeNil())
-			Expect(c2).To(Equal(c))
+			Expect(c2.CID).To(Equal(c.CID))
 		})
 
 		It("fills up the fields in the struct", func() {
