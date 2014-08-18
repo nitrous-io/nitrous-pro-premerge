@@ -275,5 +275,21 @@ func init() {
 				DROP TABLE certs;
 			`,
 		},
+		{
+			Version: "220",
+			Up: `
+				CREATE TABLE certs (
+					id bigserial PRIMARY KEY NOT NULL,
+					host_id bigint,
+					ca text NOT NULL,
+					server_cert text NOT NULL,
+					server_key text NOT NULL,
+					terminated_at timestamp without time zone,
+					created_at timestamp without time zone DEFAULT now(),
+					updated_at timestamp without time zone DEFAULT now()
+				);
+				CREATE INDEX index_certs_on_host_id ON certs USING btree (host_id);
+			`,
+		},
 	}
 }
