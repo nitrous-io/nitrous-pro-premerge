@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/nitrous-io/nitrous/models/cert"
 	"github.com/nitrous-io/nitrous/models/host"
 	"github.com/nitrous-io/nitrous/serializers"
 	. "github.com/onsi/ginkgo"
@@ -40,7 +41,7 @@ var _ = Describe("host serializer", func() {
 		)
 
 		It("serializes to JSON", func() {
-			b, err := json.Marshal(serializers.SerializeHost(model))
+			b, err := json.Marshal(serializers.SerializeHost(model, nil))
 			Expect(err).To(BeNil())
 			Expect(b).To(MatchJSON(fmt.Sprintf(`{
 				"id": 10,
@@ -60,9 +61,17 @@ var _ = Describe("host serializer", func() {
 		})
 
 		It("serializes to null JSON when host is nil", func() {
-			b, err := json.Marshal(serializers.SerializeHost(nil))
+			b, err := json.Marshal(serializers.SerializeHost(nil, nil))
 			Expect(err).To(BeNil())
 			Expect(b).To(MatchJSON(`null`))
+		})
+
+		It("includes cert CA data when cert is not nil", func() {
+			crt := &cert.Cert{
+				CA: "im a ca",
+			}
+			res := serializers.SerializeHost(model, crt)
+			Expect(res.CA).To(Equal(crt.CA))
 		})
 	})
 })

@@ -11,6 +11,7 @@ import (
 	"github.com/nitrous-io/nitrous/controllers"
 	ndb "github.com/nitrous-io/nitrous/db"
 	"github.com/nitrous-io/nitrous/middleware"
+	"github.com/nitrous-io/nitrous/models/cert"
 	"github.com/nitrous-io/nitrous/models/container"
 	"github.com/nitrous-io/nitrous/models/host"
 	"github.com/nitrous-io/nitrous/models/keypairs"
@@ -20,6 +21,7 @@ import (
 	"github.com/nitrous-io/nitrous/pkg/hostbuilderclient"
 	"github.com/nitrous-io/nitrous/pkg/httperror"
 	"github.com/nitrous-io/nitrous/serializers"
+	"github.com/nitrous-io/sslider/sslgen"
 )
 
 var (
@@ -33,6 +35,7 @@ var (
 	errHostStopInvalidState     = httperror.New(http.StatusBadRequest, "invalid_state", "host is not running")
 	errHostRestartInvalidState  = httperror.New(http.StatusBadRequest, "invalid_state", "host is not running")
 	errHostNotRunning           = httperror.New(http.StatusBadRequest, "invalid_state", "host is not running")
+	errCertNotFound             = httperror.New(http.StatusNotFound, "not_found", "host certificate does not exist")
 )
 
 var (
@@ -65,7 +68,7 @@ func Index(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 
 	hostsResp := make([]*serializers.Host, len(hosts))
 	for i, h := range hosts {
-		hostsResp[i] = serializers.SerializeHost(&h)
+		hostsResp[i] = serializers.SerializeHost(&h, nil)
 	}
 
 	env.Status = http.StatusOK
@@ -158,6 +161,16 @@ func Create(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 		}
 		return err
 	}
+	// create the cert
+	crt, err := generateCerts(h.Hostname())
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := crt.Insert(tx, h.ID); err != nil {
+		tx.Rollback()
+		return err
+	}
 	err = tx.Commit()
 	if err != nil {
 		return err
@@ -210,15 +223,19 @@ func Create(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 	env.Status = http.StatusCreated
 	env.Data = map[string]interface{}{
 		"status": "created",
-		"host":   serializers.SerializeHost(h),
+		"host":   serializers.SerializeHost(h, crt),
 	}
 	return nil
 }
 
 func Show(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
+	crt, err := cert.Find(env.DB, h.ID)
+	if err != nil {
+		return errCertNotFound
+	}
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
-		"host": serializers.SerializeHost(h),
+		"host": serializers.SerializeHost(h, crt),
 	}
 	return nil
 }
@@ -269,13 +286,17 @@ func Destroy(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.R
 		tx.Rollback()
 		return err
 	}
+	if err := cert.Delete(tx, h.ID); err != nil {
+		tx.Rollback()
+		return err
+	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
 
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
-		"host": serializers.SerializeHost(h),
+		"host": serializers.SerializeHost(h, nil),
 	}
 	return nil
 }
@@ -293,7 +314,7 @@ func Start(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Req
 
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
-		"host": serializers.SerializeHost(h),
+		"host": serializers.SerializeHost(h, nil),
 	}
 	return nil
 }
@@ -311,7 +332,7 @@ func Stop(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Requ
 
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
-		"host": serializers.SerializeHost(h),
+		"host": serializers.SerializeHost(h, nil),
 	}
 	return nil
 }
@@ -329,7 +350,7 @@ func Restart(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.R
 
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
-		"host": serializers.SerializeHost(h),
+		"host": serializers.SerializeHost(h, nil),
 	}
 	return nil
 }
@@ -388,4 +409,35 @@ func generateKey() (priv *rsa.PrivateKey, pub []byte, err error) {
 		return nil, nil, err
 	}
 	return priv, pub, nil
+}
+
+// generate a certificate that include the certificate authority, server
+// certificate and key, client certificate and key. The data will be suitable
+// for TLS authentication
+func generateCerts(hostname string) (*cert.Cert, error) {
+	// generate certificate authority
+	ca, err := sslgen.CreateCA(hostname)
+	if err != nil {
+		return nil, err
+	}
+	_, caCrt, err := ca.Generate()
+	if err != nil {
+		return nil, err
+	}
+
+	// generate server certificates
+	srv, err := sslgen.CreateServerCert(hostname, ca.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	srvKey, srvCrt, err := srv.Generate()
+	if err != nil {
+		return nil, err
+	}
+
+	return &cert.Cert{
+		CA:         string(caCrt),
+		ServerCert: string(srvCrt),
+		ServerKey:  string(srvKey),
+	}, nil
 }
