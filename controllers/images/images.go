@@ -3,8 +3,6 @@ package images
 import (
 	"net/http"
 
-	"github.com/gorilla/mux"
-
 	"github.com/nitrous-io/nitrous/controllers"
 	"github.com/nitrous-io/nitrous/middleware"
 	"github.com/nitrous-io/nitrous/models/host"
@@ -126,7 +124,7 @@ func Push(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Requ
 		return err
 	}
 
-	image := mux.Vars(r)["image"]
+	image := r.FormValue("image")
 	if image == "" {
 		return errIDOrNameRequired
 	}
@@ -153,7 +151,7 @@ func Tag(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Reque
 		return err
 	}
 
-	image := mux.Vars(r)["image"]
+	image := r.FormValue("image")
 	if image == "" {
 		return errIDOrNameRequired
 	}

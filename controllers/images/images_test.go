@@ -325,21 +325,26 @@ var _ = Describe("controllers/images", func() {
 		})
 	})
 
-	Describe("POST /api/v0/hosts/{slug}/images/{image}/push", func() {
-		doRequest := func(host, image string, params *url.Values) {
-			req, err := NewAuthedFormRequest(t, "POST", fmt.Sprintf("/api/v0/hosts/%v/images/%s/push", host, image), params)
+	Describe("POST /api/v0/hosts/{slug}/images/push", func() {
+		doRequest := func(host string, params *url.Values) {
+			req, err := NewAuthedFormRequest(t, "POST", fmt.Sprintf("/api/v0/hosts/%v/images/push", host), params)
 			Expect(err).To(BeNil())
 			handler.ServeHTTP(res, req)
 		}
 
 		It("calls PushImage", func() {
-			doRequest("foo", "devenv", &url.Values{"destination": []string{"myuser/scratch"}})
+			doRequest("foo", &url.Values{
+				"image":       []string{"devenv"},
+				"destination": []string{"myuser/scratch"},
+			})
 			Expect(mockClient.PushImageCalled).To(Equal(1))
 			Expect(res.Code).To(Equal(http.StatusOK))
 		})
 
 		It("requires destination param", func() {
-			doRequest("foo", "devenv", nil)
+			doRequest("foo", &url.Values{
+				"image": []string{"devenv"},
+			})
 			Expect(mockClient.PushImageCalled).To(Equal(0))
 			errType, errDesc := ErrorSlug(res.Body)
 			Expect(errType).To(Equal("invalid_request"))
@@ -348,22 +353,28 @@ var _ = Describe("controllers/images", func() {
 
 		It("returns 500 on freighterclient error", func() {
 			mockClient.PushImageError = &freighterclient.StatusError{418}
-			doRequest("foo", "devenv", &url.Values{"destination": []string{"scratch"}})
+			doRequest("foo", &url.Values{
+				"image":       []string{"devenv"},
+				"destination": []string{"scratch"},
+			})
 			Expect(mockClient.PushImageCalled).To(Equal(1))
 			errType, _ := ErrorSlug(res.Body)
 			Expect(errType).To(Equal("internal_server_error"))
 		})
 	})
 
-	Describe("POST /api/v0/hosts/{slug}/images/{image}/tag", func() {
-		doRequest := func(host, image string, params *url.Values) {
-			req, err := NewAuthedFormRequest(t, "POST", fmt.Sprintf("/api/v0/hosts/%v/images/%s/tag", host, image), params)
+	Describe("POST /api/v0/hosts/{slug}/images/tag", func() {
+		doRequest := func(host string, params *url.Values) {
+			req, err := NewAuthedFormRequest(t, "POST", fmt.Sprintf("/api/v0/hosts/%v/images/tag", host), params)
 			Expect(err).To(BeNil())
 			handler.ServeHTTP(res, req)
 		}
 
 		It("calls TagImage", func() {
-			doRequest("foo", "scratch", &url.Values{"tag": []string{"staging"}})
+			doRequest("foo", &url.Values{
+				"image": []string{"scratch"},
+				"tag":   []string{"staging"},
+			})
 			Expect(mockClient.TagImageCalled).To(Equal(1))
 			Expect(mockClient.ReceivedImage).To(Equal("scratch"))
 			Expect(mockClient.ReceivedTag).To(Equal("staging"))
@@ -372,14 +383,20 @@ var _ = Describe("controllers/images", func() {
 		})
 
 		It("sends force param", func() {
-			doRequest("foo", "scratch", &url.Values{"tag": []string{"staging"}, "force": []string{"1"}})
+			doRequest("foo", &url.Values{
+				"image": []string{"scratch"},
+				"tag":   []string{"staging"},
+				"force": []string{"1"},
+			})
 			Expect(mockClient.TagImageCalled).To(Equal(1))
 			Expect(mockClient.TagImageForce).To(BeTrue())
 			Expect(res.Code).To(Equal(http.StatusOK))
 		})
 
 		It("requires tag param", func() {
-			doRequest("foo", "devenv", nil)
+			doRequest("foo", &url.Values{
+				"image": []string{"scratch"},
+			})
 			Expect(mockClient.TagImageCalled).To(Equal(0))
 			errType, errDesc := ErrorSlug(res.Body)
 			Expect(errType).To(Equal("invalid_request"))
@@ -388,7 +405,10 @@ var _ = Describe("controllers/images", func() {
 
 		It("returns 500 on freighterclient error", func() {
 			mockClient.TagImageError = &freighterclient.StatusError{418}
-			doRequest("foo", "devenv", &url.Values{"tag": []string{"staging"}})
+			doRequest("foo", &url.Values{
+				"image": []string{"scratch"},
+				"tag":   []string{"staging"},
+			})
 			Expect(mockClient.TagImageCalled).To(Equal(1))
 			errType, _ := ErrorSlug(res.Body)
 			Expect(errType).To(Equal("internal_server_error"))
