@@ -1,5 +1,6 @@
 bitbucket.org/kardianos/osext #6836bbd915dac0c3115ca7febb32af9ce74eb1d6
 code.google.com/p/go.crypto/bcrypt #1064b89a6fb591df0dd65422295b8498916b092f
+github.com/c9s/goprocinfo #156cebb00efa1f184ce9f021404693012046c2fe
 github.com/daviddengcn/go-colortext #b5c0891944c2f150ccc9d02aecf51b76c14c2948
 github.com/ddollar/dist #f559761fd36c52dc90d7d2c0bc537e6d96b0edc5
 github.com/ddollar/forego #73521422bea32cc8d14491b271bf96ebb2625a9c
@@ -15,7 +16,7 @@ github.com/kr/text #6807e777504f54ad073ecef66747de158294b639
 github.com/lib/pq #ae7391529ced9c12f06bf01eae33dadb4c70e49f
 github.com/mitchellh/cli #eaf0e415fc517a431dca53c7b2e7559d42238ebe
 github.com/mitchellh/goamz #d396d8be696061b73ef27c99ea444725b068dbc8
-github.com/nitrous-io/freighter/freighterclient #af7aea212fbeafd61335ad07c63a0cc069a8c4fa !git@github.com:nitrous-io/freighter
+github.com/nitrous-io/freighter/freighterclient #4cb1cac479afe8c038421c5b7d84b76984b8f798 !git@github.com:nitrous-io/freighter
 github.com/nitrous-io/hostbuilder #5b04849a3c8f44de76b7c69a96c2797122eae166 !git@github.com:nitrous-io/hostbuilder
 github.com/nitrous-io/nitrous-common #0e9652a23ed102d07b140ec479cb5a54e894a708 !git@github.com:nitrous-io/nitrous-common
 github.com/nitrous-io/sslider/sslgen #a7178a1aa6051f6a0d3d8b220025addb2f3d065a !git@github.com:nitrous-io/sslider
