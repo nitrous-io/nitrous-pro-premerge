@@ -3,6 +3,7 @@ package serializers
 import (
 	"time"
 
+	"github.com/nitrous-io/nitrous/models/cert"
 	"github.com/nitrous-io/nitrous/models/host"
 )
 
@@ -17,6 +18,7 @@ type Host struct {
 	Hostname       string `json:"hostname"` // where we can access the host i.e. slug.nitrouspro.com
 	Size           string `json:"size"`
 	State          string `json:"state"`
+	CA             string `json:"ca,omitempty"` // root CA for client to connect to the host
 
 	Stats *HostInfo `json:"stats,omitempty"`
 
@@ -25,11 +27,11 @@ type Host struct {
 	TerminatedAt *time.Time `json:"terminated_at,omitempty"`
 }
 
-func SerializeHost(h *host.Host) *Host {
+func SerializeHost(h *host.Host, crt *cert.Cert) *Host {
 	if h == nil {
 		return nil
 	}
-	return &Host{
+	res := &Host{
 		ID:             h.ID,
 		UserID:         h.UserID,
 		RegionID:       h.RegionID,
@@ -44,4 +46,8 @@ func SerializeHost(h *host.Host) *Host {
 		UpdatedAt:      h.UpdatedAt,
 		TerminatedAt:   h.TerminatedAt,
 	}
+	if crt != nil {
+		res.CA = crt.CA
+	}
+	return res
 }

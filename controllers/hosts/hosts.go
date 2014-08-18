@@ -35,6 +35,7 @@ var (
 	errHostStopInvalidState     = httperror.New(http.StatusBadRequest, "invalid_state", "host is not running")
 	errHostRestartInvalidState  = httperror.New(http.StatusBadRequest, "invalid_state", "host is not running")
 	errHostNotRunning           = httperror.New(http.StatusBadRequest, "invalid_state", "host is not running")
+	errCertNotFound             = httperror.New(http.StatusNotFound, "not_found", "host certificate does not exist")
 )
 
 var (
@@ -67,7 +68,7 @@ func Index(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 
 	hostsResp := make([]*serializers.Host, len(hosts))
 	for i, h := range hosts {
-		hostsResp[i] = serializers.SerializeHost(&h)
+		hostsResp[i] = serializers.SerializeHost(&h, nil)
 	}
 
 	env.Status = http.StatusOK
@@ -222,15 +223,19 @@ func Create(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 	env.Status = http.StatusCreated
 	env.Data = map[string]interface{}{
 		"status": "created",
-		"host":   serializers.SerializeHost(h),
+		"host":   serializers.SerializeHost(h, crt),
 	}
 	return nil
 }
 
 func Show(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
+	crt, err := cert.Find(env.DB, h.ID)
+	if err != nil {
+		return errCertNotFound
+	}
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
-		"host": serializers.SerializeHost(h),
+		"host": serializers.SerializeHost(h, crt),
 	}
 	return nil
 }
@@ -291,7 +296,7 @@ func Destroy(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.R
 
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
-		"host": serializers.SerializeHost(h),
+		"host": serializers.SerializeHost(h, nil),
 	}
 	return nil
 }
@@ -309,7 +314,7 @@ func Start(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Req
 
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
-		"host": serializers.SerializeHost(h),
+		"host": serializers.SerializeHost(h, nil),
 	}
 	return nil
 }
@@ -327,7 +332,7 @@ func Stop(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Requ
 
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
-		"host": serializers.SerializeHost(h),
+		"host": serializers.SerializeHost(h, nil),
 	}
 	return nil
 }
@@ -345,7 +350,7 @@ func Restart(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.R
 
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
-		"host": serializers.SerializeHost(h),
+		"host": serializers.SerializeHost(h, nil),
 	}
 	return nil
 }
