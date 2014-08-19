@@ -16,6 +16,7 @@ type Container struct {
 	Name      string `json:"name,omitempty"`
 	IPAddress string `json:"ip_address,omitempty"`
 	State     string `json:"state"`
+	HostSlug  string `json:"host_slug,omitempty"`
 
 	CreatedAt    *time.Time `json:"created_at"`
 	UpdatedAt    *time.Time `json:"updated_at,omitempty"`
@@ -31,6 +32,7 @@ func SerializeContainer(c *container.Container) *Container {
 		Image:        c.Image,
 		Slug:         c.Slug,
 		Name:         c.Name.String,
+		HostSlug:     c.HostSlug,
 		IPAddress:    c.IPAddress,
 		State:        c.State,
 		CreatedAt:    c.CreatedAt,

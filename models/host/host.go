@@ -188,7 +188,7 @@ func (h *Host) Validate(db *db.Database) error {
 // Hostname returns the public domain that the host can be reached. This should be the
 // same as the DNS address which we map the the host IP address
 //
-// We assume that slug is vald ( its cant be empty ), therefore we wont check
+// We assume that slug is valid ( it can't be empty ), therefore we won't check
 // it here
 func (h *Host) Hostname() string {
 	return h.Slug + ".nitrouspro.com" // FIXME
