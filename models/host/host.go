@@ -148,8 +148,7 @@ func (h *Host) Insert(d db.QueryReceiver) error {
 
 func (h *Host) UpdateState(d db.QueryReceiver, state string) error {
 	h.State = state
-	_, err := d.Exec("UPDATE hosts SET state = $1 WHERE id = $2", state, h.ID)
-	return err
+	return h.Update(d)
 }
 
 func (h *Host) Update(d db.QueryReceiver) error {
