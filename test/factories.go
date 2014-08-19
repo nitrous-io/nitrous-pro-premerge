@@ -126,6 +126,7 @@ func CreateHostStack(db *db.Database, hs *HostStack) (*HostStack, error) {
 	hs.H.PlanID = hs.P.ID
 	hs.H.ProviderTemplateID = hs.PT.ID
 	hs.H.UserID = hs.U.ID
+	hs.H.Secret = "test-secret"
 
 	err = hs.H.Insert(tx)
 	if err != nil {

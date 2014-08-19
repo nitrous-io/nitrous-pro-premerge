@@ -345,6 +345,7 @@ var _ = Describe("controllers/hosts", func() {
 					Expect(h.Size.String).To(Equal(hs.P.Name))
 					Expect(h.ProviderIdentifier.String).To(Equal("abcd1234"))
 					Expect(h.FreighterdPort.Int64).To(Equal(int64(65333)))
+					Expect(h.Secret).To(HaveLen(256))
 				})
 
 				It("creates a keypair associated with that host", func() {

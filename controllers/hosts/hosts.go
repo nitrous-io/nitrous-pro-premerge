@@ -19,6 +19,7 @@ import (
 	"github.com/nitrous-io/nitrous/models/region"
 	"github.com/nitrous-io/nitrous/pkg/hostbuilderclient"
 	"github.com/nitrous-io/nitrous/pkg/httperror"
+	"github.com/nitrous-io/nitrous/pkg/securerandom"
 	"github.com/nitrous-io/nitrous/serializers"
 )
 
@@ -131,6 +132,11 @@ func Create(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
+	secret, err := securerandom.Base64(191)
+	if err != nil {
+		return err
+	}
+
 	h := &host.Host{
 		UserID:             env.User.ID,
 		RegionID:           rg.ID,
@@ -141,6 +147,7 @@ func Create(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 		MaxContainers:      sql.NullInt64{pl.MaxContainers, true},
 		Size:               sql.NullString{size, true},
 		State:              host.StateBorn,
+		Secret:             secret,
 	}
 
 	// Save record to db first to reserve slug (since it's globally unique).
@@ -174,6 +181,7 @@ func Create(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 	}
 	config["name"] = slug
 	config["public_keys"] = []string{string(pubkey)}
+	config["secret"] = secret
 
 	info, err := HostbuilderClient.Create(pt.Provider, &config)
 	if err != nil {

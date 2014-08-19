@@ -63,13 +63,13 @@ var _ = Describe("models/host", func() {
 			Expect(err).To(BeNil())
 
 			_, err = db.Exec(`INSERT INTO hosts
-				(user_id, slug, region_id, plan_id, provider_template_id)
-				VALUES ($1, $2, $3, $4, $5);`,
-				u1.ID, "my-host-1", hs.R.ID, hs.P.ID, hs.PT.ID)
+				(user_id, slug, region_id, plan_id, provider_template_id, secret)
+				VALUES ($1, $2, $3, $4, $5, $6);`,
+				u1.ID, "my-host-1", hs.R.ID, hs.P.ID, hs.PT.ID, "secret")
 			Expect(err).To(BeNil())
-			_, err = db.Exec(`INSERT INTO hosts (user_id, slug, region_id, plan_id, provider_template_id)
-				VALUES ($1, $2, $3, $4, $5);`,
-				u1.ID, "my-host-2", hs.R.ID, hs.P.ID, hs.PT.ID)
+			_, err = db.Exec(`INSERT INTO hosts (user_id, slug, region_id, plan_id, provider_template_id, secret)
+				VALUES ($1, $2, $3, $4, $5, $6);`,
+				u1.ID, "my-host-2", hs.R.ID, hs.P.ID, hs.PT.ID, "secret")
 			Expect(err).To(BeNil())
 		})
 

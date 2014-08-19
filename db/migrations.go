@@ -275,5 +275,11 @@ func init() {
 				DROP TABLE certs;
 			`,
 		},
+		{
+			Version: "220",
+			Up: `
+				ALTER TABLE hosts ADD COLUMN secret character varying(256) NOT NULL;
+			`,
+		},
 	}
 }

@@ -50,6 +50,9 @@ type Host struct {
 	IPAddress      sql.NullString `db:"ip_address"`
 	FreighterdPort sql.NullInt64  `db:"freighterd_port"`
 
+	// shared secret with host used for authentication
+	Secret string `db:"secret"`
+
 	// ProviderIdentifier is the identifier used by the host's provider to
 	// uniquely identify this host.
 	ProviderIdentifier sql.NullString `db:"provider_identifier"`
@@ -135,10 +138,10 @@ func (h *Host) Insert(d db.QueryReceiver) error {
 	}
 	nstmt, err := d.PrepareNamed(`INSERT INTO hosts
 		(user_id, region_id, plan_id, provider_template_id, slug, name,
-			state, ip_address, provider_identifier, max_containers, size, freighterd_port)
+			state, ip_address, provider_identifier, max_containers, size, freighterd_port, secret)
 		VALUES
 		(:user_id, :region_id, :plan_id, :provider_template_id, :slug,
-		:name, :state, :ip_address, :provider_identifier, :max_containers, :size, :freighterd_port)
+		:name, :state, :ip_address, :provider_identifier, :max_containers, :size, :freighterd_port, :secret)
 		RETURNING *;`)
 	if err != nil {
 		return err
