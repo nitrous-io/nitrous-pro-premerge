@@ -90,6 +90,7 @@ func Index(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 			// info to the frontend
 			if freighterErr == controllers.ErrHostNotRunning || freighterErr == controllers.ErrHostIPUnknown {
 				for _, sc := range savedContainers {
+					sc.State = "host_stopped"
 					containersResp = append(containersResp, serializers.SerializeContainer(sc))
 				}
 			} else {
@@ -281,7 +282,17 @@ func commit(cn *container.Container, h *host.Host, env *middleware.Env, w http.R
 func show(cn *container.Container, h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 	cl, err := controllers.NewFreighterClient(env.DB, h)
 	if err != nil {
-		return err
+		if err == controllers.ErrHostNotRunning || err == controllers.ErrHostIPUnknown {
+			cn.State = "host_stopped"
+
+			env.Status = http.StatusOK
+			env.Data = map[string]interface{}{
+				"container": serializers.SerializeContainer(cn),
+			}
+			return nil
+		} else {
+			return err
+		}
 	}
 
 	// TODO Run this in a goroutine so it runs concurrently with DB query.
@@ -386,9 +397,6 @@ func WithContainerAndHost(fn func(cn *container.Container, h *host.Host, env *mi
 		}
 		if h == nil {
 			return errHostNotFound
-		}
-		if h.State != host.StateRunning {
-			return controllers.ErrHostNotRunning
 		}
 		return fn(cn, h, env, w, r)
 	}

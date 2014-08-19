@@ -171,22 +171,6 @@ var _ = Describe("controllers/containers", func() {
 				Expect(res.Code).To(Equal(http.StatusOK))
 				Expect(handlerCalled).To(BeTrue())
 			})
-
-			Context("when container's host is not running", func() {
-				BeforeEach(func() {
-					hs.H.UpdateState(db, host.StateStopped)
-					UnstubFreighterFn()
-				})
-
-				It("returns HTTP 503 Service Unavailable", func() {
-					req, err := NewRequest("GET", "/rails-box/action", nil)
-					Expect(err).To(BeNil())
-					handler.ServeHTTP(res, req)
-
-					Expect(res.Code).To(Equal(http.StatusServiceUnavailable))
-					Expect(handlerCalled).To(BeFalse())
-				})
-			})
 		})
 	})
 
@@ -435,10 +419,10 @@ var _ = Describe("controllers/containers", func() {
 				Expect(j.Containers[0].CreatedAt).NotTo(BeNil())
 				Expect(j.Containers[0].UpdatedAt).NotTo(BeNil())
 				Expect(j.Containers[0].TerminatedAt).To(BeNil())
-				// ip address, state will be empty since the host is stopped,
+				// ip address will be empty since the host is stopped,
 				// so the freighter API call didn't happen
 				Expect(j.Containers[0].IPAddress).To(Equal(""))
-				Expect(j.Containers[0].State).To(Equal(""))
+				Expect(j.Containers[0].State).To(Equal("host_stopped"))
 
 				Expect(j.Containers[0].Cmd).To(BeNil())
 				Expect(j.Containers[0].Entrypoint).To(BeNil())
@@ -505,7 +489,7 @@ var _ = Describe("controllers/containers", func() {
 				// ip address, state will be empty since the host is stopped,
 				// so the freighter API call didn't happen
 				Expect(j.Containers[0].IPAddress).To(Equal(""))
-				Expect(j.Containers[0].State).To(Equal(""))
+				Expect(j.Containers[0].State).To(Equal("host_stopped"))
 
 				Expect(j.Containers[0].Cmd).To(BeNil())
 				Expect(j.Containers[0].Entrypoint).To(BeNil())
@@ -582,7 +566,7 @@ var _ = Describe("controllers/containers", func() {
 				// ip address, state will be empty since the host is stopped,
 				// so the freighter API call didn't happen
 				Expect(j.Containers[0].IPAddress).To(Equal(""))
-				Expect(j.Containers[0].State).To(Equal(""))
+				Expect(j.Containers[0].State).To(Equal("host_stopped"))
 
 				Expect(j.Containers[1].ID).To(Equal(c1.ID))
 				Expect(j.Containers[1].CID).To(Equal("cafedead"))
@@ -597,7 +581,7 @@ var _ = Describe("controllers/containers", func() {
 				// ip address, state will be empty since the host is stopped,
 				// so the freighter API call didn't happen
 				Expect(j.Containers[1].IPAddress).To(Equal(""))
-				Expect(j.Containers[1].State).To(Equal(""))
+				Expect(j.Containers[1].State).To(Equal("host_stopped"))
 			})
 		})
 
@@ -1081,6 +1065,77 @@ var _ = Describe("controllers/containers", func() {
 
 				errType, _ := j["error"].(string)
 				Expect(errType).To(Equal("internal_server_error"))
+			})
+		})
+
+		Context("when host is not running", func() {
+			BeforeEach(func() {
+				err := hs.H.UpdateState(db, host.StateStopped)
+				Expect(err).To(BeNil())
+				UnstubFreighterFn()
+			})
+
+			It("responds with the container with its state set to host_stopped", func() {
+				doRequest()
+				Expect(res.Code).To(Equal(http.StatusOK))
+
+				var j struct {
+					Container *serializers.Container `json:"container"`
+				}
+				err := json.NewDecoder(res.Body).Decode(&j)
+				Expect(err).To(BeNil())
+
+				Expect(j.Container.ID).To(Equal(c.ID))
+				Expect(j.Container.CID).To(Equal("deadbeef"))
+				Expect(j.Container.UserID).To(Equal(u.ID))
+				Expect(j.Container.HostID).To(Equal(hs.H.ID))
+				Expect(j.Container.Image).To(Equal("nitrous-base"))
+				Expect(j.Container.Slug).To(Equal(slug))
+				Expect(j.Container.Name).To(Equal("Elixir server"))
+				Expect(j.Container.IPAddress).To(Equal(""))
+				Expect(j.Container.State).To(Equal("host_stopped"))
+				Expect(j.Container.ExitCode).To(Equal(0))
+				Expect(j.Container.StartedAt.IsZero()).To(BeTrue())
+				Expect(j.Container.FinishedAt.IsZero()).To(BeTrue())
+				Expect(j.Container.CreatedAt).NotTo(BeNil())
+				Expect(j.Container.UpdatedAt).NotTo(BeNil())
+				Expect(j.Container.TerminatedAt).To(BeNil())
+			})
+		})
+
+		Context("when host IP address is not available", func() {
+			BeforeEach(func() {
+				hs.H.IPAddress = sql.NullString{}
+				err := hs.H.Update(db)
+				Expect(err).To(BeNil())
+				UnstubFreighterFn()
+			})
+
+			It("responds with the container with its state set to host_stopped", func() {
+				doRequest()
+				Expect(res.Code).To(Equal(http.StatusOK))
+
+				var j struct {
+					Container *serializers.Container `json:"container"`
+				}
+				err := json.NewDecoder(res.Body).Decode(&j)
+				Expect(err).To(BeNil())
+
+				Expect(j.Container.ID).To(Equal(c.ID))
+				Expect(j.Container.CID).To(Equal("deadbeef"))
+				Expect(j.Container.UserID).To(Equal(u.ID))
+				Expect(j.Container.HostID).To(Equal(hs.H.ID))
+				Expect(j.Container.Image).To(Equal("nitrous-base"))
+				Expect(j.Container.Slug).To(Equal(slug))
+				Expect(j.Container.Name).To(Equal("Elixir server"))
+				Expect(j.Container.IPAddress).To(Equal(""))
+				Expect(j.Container.State).To(Equal("host_stopped"))
+				Expect(j.Container.ExitCode).To(Equal(0))
+				Expect(j.Container.StartedAt.IsZero()).To(BeTrue())
+				Expect(j.Container.FinishedAt.IsZero()).To(BeTrue())
+				Expect(j.Container.CreatedAt).NotTo(BeNil())
+				Expect(j.Container.UpdatedAt).NotTo(BeNil())
+				Expect(j.Container.TerminatedAt).To(BeNil())
 			})
 		})
 
