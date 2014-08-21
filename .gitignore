@@ -4,6 +4,7 @@
 # ssh keys
 id_rsa
 .github_rsa
+.buildkey
 
 # Rails
 rails/.bundle/

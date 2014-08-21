@@ -30,6 +30,7 @@ RUN /usr/local/ruby/2.1.2/bin/gem install bundle
 
 RUN mkdir -p /opt/src/github.com/nitrous-io/nitrous
 
+ADD .buildkey /root/.ssh/id_rsa
 ADD util/ssh_config /etc/ssh/ssh_config
 ADD . /opt/src/github.com/nitrous-io/nitrous
 
@@ -39,6 +40,10 @@ RUN /etc/init.d/postgresql start &&\
 WORKDIR /opt/src/github.com/nitrous-io/nitrous
 
 RUN cp .env-example .env
+RUN sed -i s/vagrant/root/ .env
 
 RUN /etc/init.d/postgresql start &&\
     make createdb
+
+EXPOSE 3000
+CMD /etc/init.d/postgresql start && goop install && make run
