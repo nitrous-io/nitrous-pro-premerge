@@ -47,7 +47,9 @@ func (s *Server) drawRoutes() {
 
 		s.routeJSON("/hosts/{slug}/images", mw.Auth(mw.HostViaPath("slug", images.Index)), "GET")
 		s.routeJSON("/hosts/{slug}/images", mw.Auth(mw.HostViaPath("slug", images.Build)), "POST")
-		s.routeJSON("/hosts/{slug}/images/pull", mw.Auth(mw.HostViaPath("slug", images.Pull)), "POST")
+		// pull is not a JSON endpoint. It's just a proxy which streams back
+		// docker's json response
+		s.route("/hosts/{slug}/images/pull", mw.Auth(mw.HostViaPath("slug", images.Pull)), "POST")
 		// Test thoroughly before adding a POST /hosts/{slug}/images/{image:.*}
 		// endpoint because that would probably match the push and tag routes.
 		s.routeJSON("/hosts/{slug}/images/{image:.*}/push", mw.Auth(mw.HostViaPath("slug", images.Push)), "POST")
