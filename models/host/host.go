@@ -115,6 +115,23 @@ func FindByUserAndID(db *db.Database, user *user.User, id int64) (*Host, error) 
 	return host, err
 }
 
+func FindBySlug(db *db.Database, slug string) (*Host, error) {
+	host := &Host{}
+	q := `SELECT hosts.*, provider_templates.provider
+				FROM hosts
+				INNER JOIN provider_templates ON hosts.provider_template_id = provider_templates.id
+				WHERE hosts.slug = $1 AND terminated_at IS NULL;`
+	err := db.Get(host, q, slug)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return host, err
+}
+
 func FindByUserAndSlug(db *db.Database, user *user.User, slug string) (*Host, error) {
 	host := &Host{}
 	q := `SELECT hosts.*, provider_templates.provider

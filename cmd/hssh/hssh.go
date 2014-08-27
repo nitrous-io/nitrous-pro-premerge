@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -60,12 +59,9 @@ func init() {
 func main() {
 	// get host's id
 	if len(os.Args) != 2 {
-		log.Fatalf("Required host's id")
+		log.Fatalf("Required host's slug")
 	}
-	id, err := strconv.ParseInt(os.Args[1], 10, 64)
-	if err != nil {
-		log.Fatalf("Invalid id %v", os.Args[1])
-	}
+	slug := os.Args[1]
 
 	// get db conection
 	dbConn, err := db.NewDatabase(dbURL)
@@ -75,9 +71,9 @@ func main() {
 	log.Print("===> established db connection ...")
 
 	// get host
-	h, err := host.FindByID(dbConn, id)
+	h, err := host.FindBySlug(dbConn, slug)
 	if err != nil || h == nil {
-		log.Fatalf("failed to find host with id %d", id)
+		log.Fatalf("failed to find host with id %d", slug)
 	}
 	log.Print("===> found host...")
 
