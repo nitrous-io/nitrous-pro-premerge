@@ -1,7 +1,7 @@
 .card-header.bordered
   h2 New Host
 
-form
+form submit='create'
   .card-body
     .ui.input-group
       label.field-label for='hosts-new-name'
@@ -10,7 +10,7 @@ form
 
       label.field-label for='hosts-new-slug'
         | Unique Slug
-      = input type='text' id='hosts-new-slug' name='slug' classNameBindings='view.slugFieldInvalid:error' pattern='[a-z0-9][a-z0-9\-]*' value=slug
+      = input type='text' id='hosts-new-slug' name='slug' classNameBindings='view.slugFieldInvalid:error' pattern=App.slug.inputPattern title=App.slug.inputTitle value=slug
 
       label.field-label for='hosts-new-region'
         | Region
@@ -101,5 +101,5 @@ form
           .spinner
           | Creating...
       else
-        button.ui.btn click='cancel' Cancel
-        button.ui.btn.primary click='create' disabled={view.createButtonDisabled} Create
+        a.ui.btn href='#' click='cancel' Cancel
+        input.ui.btn.primary type='submit' disabled={view.createButtonDisabled} value='Create'

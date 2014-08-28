@@ -2,8 +2,6 @@ App.HostsNewView = Em.View.extend
   elementId: 'hosts-new-view'
   classNames: ['ui', 'card']
 
-  slugIsDirty: false
-
   nameFieldInvalid: Em.computed.equal('controller.invalidField', 'name')
   slugFieldInvalid: Em.computed.equal('controller.invalidField', 'slug')
 
@@ -26,14 +24,7 @@ App.HostsNewView = Em.View.extend
     $region.eq(0).attr('checked', true).change()
     $plan.eq(1).attr('checked', true).change()
 
-    @$('#hosts-new-name').on 'change.hosts-new keydown.hosts-new', (ev) =>
-      Em.run.next =>
-        unless @get('slugIsDirty')
-          @set 'controller.slug', helpers.slugify($.trim(ev.target.value))
-
-    @$('#hosts-new-slug').one 'change.hosts-new keydown.hosts-new', (ev) =>
-      unless ev.target.value == helpers.slugify($.trim(@get 'controller.name'))
-        @set 'slugIsDirty', true
+    App.slug.slugify(@$('#hosts-new-name'), @$('#hosts-new-slug'))
 
     @$('#hosts-new-name').focus()
 
@@ -41,5 +32,4 @@ App.HostsNewView = Em.View.extend
     @_super()
     @$('input[name=region]').off 'change.hosts-new'
     @$('input[name=size]').off 'change.hosts-new'
-    @$('#hosts-new-name').off 'change.hosts-new keydown.hosts-new'
-    @$('#hosts-new-slug').off 'change.hosts-new keydown.hosts-new'
+    App.slug.unslugify(@$('#hosts-new-name'))

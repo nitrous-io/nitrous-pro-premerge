@@ -10,7 +10,7 @@ form submit='create'
 
       label.field-label for='volumes-new-slug'
         | Unique Slug
-      = input type='text' id='volumes-new-slug' name='slug' value=slug
+      = input type='text' id='volumes-new-slug' name='slug' pattern=App.slug.inputPattern title=App.slug.inputTitle value=slug
 
   .card-footer.bordered
     .right

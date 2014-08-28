@@ -37,6 +37,8 @@ App.ImagesNewView = Em.View.extend
         @set 'selectedOption', ev.target.value
     ).change()
 
+    @$('#images-new-name').focus()
+
   willDestroyElement: ->
     @_super()
     if codeMirror = @get('codeMirror')

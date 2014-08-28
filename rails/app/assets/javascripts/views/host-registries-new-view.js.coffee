@@ -16,6 +16,7 @@ App.HostRegistriesNewView = Em.View.extend
       false
 
     @$('.registry-buttons .btn.default').click()
+    @$('#registries-new-username').focus()
 
   willDestroyElement: ->
     @_super()
