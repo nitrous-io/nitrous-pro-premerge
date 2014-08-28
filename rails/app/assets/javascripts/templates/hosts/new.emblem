@@ -98,7 +98,7 @@ form submit='create'
     .right
       if saving
         button.ui.btn disabled='disabled'
-          .spinner
+          i.spinner
           | Creating...
       else
         a.ui.btn href='#' click='cancel' Cancel

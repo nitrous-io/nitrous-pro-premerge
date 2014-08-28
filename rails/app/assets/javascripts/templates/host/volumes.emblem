@@ -1,29 +1,35 @@
 = host-tab-bar selected='volumes'
 
 .card-body
-  if volumes.length
-    ul.ui.list.with-separators.item-2-line
-      each volume in volumes
-        li.list-item
-          .left-accessory
-            .ui.checkbox
-              input type='checkbox' name='volume' id={volume.inputId} value={volume.slug}
-              label
-          .lines
-            h4
-              = volume.displayName
-            p
-              = volume.slug
-              span.sep
-              | Created&nbsp;
-              = ago createdAt
-              span.sep
-              a href='#' Calculate Size
+  if volumes.loaded
+    if volumes.length
+      ul.ui.list.with-separators.item-2-line
+        each volume in volumes
+          li.list-item
+            .left-accessory
+              .ui.checkbox
+                input type='checkbox' name='volume' id={volume.inputId} value={volume.slug}
+                label
+            .lines
+              label for={volume.inputId}
+                h4
+                  = volume.displayName
+                p
+                  = volume.slug
+                  span.sep
+                  | Created&nbsp;
+                  = ago createdAt
+                  span.sep
+                  a href='#' Calculate Size
 
+    else
+      p.hint-text
+        i.fa.fa-exclamation-circle
+        | This host does not have any volumes.
   else
     p.hint-text
-      i.fa.fa-exclamation-circle
-      | This host does not have any volumes.
+      i.spinner
+      | Loading...
 
 .card-footer.bordered
   .left

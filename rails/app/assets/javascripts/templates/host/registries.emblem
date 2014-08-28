@@ -1,27 +1,33 @@
 = host-tab-bar selected='registries'
 
 .card-body
-  if registries.length
-    ul.ui.list.with-separators.item-2-line
-      each registry in registries
-        li.list-item
-          .left-accessory
-            .ui.checkbox
-              input type='checkbox' name='registry' id={registry.inputId} value={registry.url}
-              label
-          .lines
-            h4
-              = registry.url
-            p
-              = registry.username
-              if registry.email
-                | &nbsp;(
-                = registry.email
-                | )
+  if registries.loaded
+    if registries.length
+      ul.ui.list.with-separators.item-2-line
+        each registry in registries
+          li.list-item
+            .left-accessory
+              .ui.checkbox
+                input type='checkbox' name='registry' id={registry.inputId} value={registry.url}
+                label
+            .lines
+              label for={registry.inputId}
+                h4
+                  = registry.url
+                p
+                  = registry.username
+                  if registry.email
+                    | &nbsp;(
+                    = registry.email
+                    | )
+    else
+      p.hint-text
+        i.fa.fa-exclamation-circle
+        | This host is not connected to any Docker registry.
   else
     p.hint-text
-      i.fa.fa-exclamation-circle
-      | This host is not connected to any Docker registry.
+      i.spinner
+      | Loading...
 
 .card-footer.bordered
   .left
