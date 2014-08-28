@@ -18,6 +18,7 @@ var _ = Describe("volume serializer", func() {
 
 		model = &volume.Volume{
 			ID:        10,
+			HostID:    123,
 			Slug:      "music",
 			Name:      "music share",
 			CreatedAt: &createdAt,
@@ -32,6 +33,7 @@ var _ = Describe("volume serializer", func() {
 			Expect(err).To(BeNil())
 			Expect(b).To(MatchJSON(`{
 				"id": 10,
+        "host_id": 123,
 				"slug": "music",
 				"name": "music share",
 				"created_at": "2013-11-01T00:00:00Z",
@@ -47,6 +49,7 @@ var _ = Describe("volume serializer", func() {
 			Expect(err).To(BeNil())
 			Expect(b).To(MatchJSON(`[{
 				"id": 10,
+        "host_id": 123,
 				"slug": "music",
 				"name": "music share",
 				"created_at": "2013-11-01T00:00:00Z",

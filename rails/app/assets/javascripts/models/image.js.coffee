@@ -10,6 +10,13 @@ App.Image = klass = App.Model.extend
   virtualSize: attr('number', as: 'virtual_size')
   createdAt: attr('date', as: 'created_at', serialize: false)
 
+  nameTagAndId: (->
+    name = @get 'name'
+    tag = @get 'tag'
+    id = @get 'id'
+    "#{name}:#{tag} (#{id})"
+  ).property 'name', 'tag', 'id'
+
 klass.reopenClass
   url: '/hosts/:hostId/images'
   primaryKey: 'id'

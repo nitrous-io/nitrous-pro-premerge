@@ -1,13 +1,13 @@
 .card-header.bordered
   h2 New Image
 
-form
+form submit='create target="view"'
   .card-body
     .ui.input-group
       label.field-label
         | Host
       .ui.select
-        Ember.Select content=App.hosts optionValuePath='content.slug' optionLabelPath='content.displayName' value=selectedHostSlug
+        Ember.Select content=App.hosts optionValuePath='content.slug' optionLabelPath='content.nameAndSlug' value=selectedHostSlug
 
       label.field-label for='images-new-name'
         | Name
@@ -66,4 +66,4 @@ form
   .card-footer.bordered
     .right
       a.ui.btn href='#' click='cancel' Cancel
-      button.ui.btn.primary disabled=view.disableCreateButton click='create target="view"' Create
+      input.ui.btn.primary type='submit' disabled={view.createButtonDisabled} value='Create'

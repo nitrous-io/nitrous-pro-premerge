@@ -7,17 +7,15 @@ form
       label.field-label
         | Host
       .ui.select
-        select
-          option Project X
-          option Consulting
+        Ember.Select content=App.hosts optionValuePath='content.slug' optionLabelPath='content.nameAndSlug' value=selectedHostSlug
 
       label.field-label for='containers-new-name'
         | Name
-      input type='text' id='containers-new-name' name='name'
+      = input type='text' id='containers-new-name' name='name' classNameBindings='view.nameFieldInvalid:error' value=name
 
       label.field-label for='containers-new-slug'
         | Unique Slug
-      input type='text' id='containers-new-slug' name='slug'
+      = input type='text' id='containers-new-slug' name='slug' classNameBindings='view.slugFieldInvalid:error' pattern=App.slug.inputPattern title=App.slug.inputTitle value=slug
 
   .card-body.bordered
     .ui.input-group
@@ -33,9 +31,7 @@ form
             label for='containers-new-image-type-host-image' Use Image On This Host
 
         .ui.select.indent
-          select
-            option web-app-template
-            option fun-times-33
+          Ember.Select content=selectedHost.images optionValuePath='content.id' optionLabelPath='content.nameTagAndId' value=selectedImageId
 
         ul.ui.checkbox-group
           li

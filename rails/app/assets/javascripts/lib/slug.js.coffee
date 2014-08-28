@@ -1,6 +1,9 @@
 App.slug =
   toSlug: (text) ->
-    (text.dasherize().replace(/[^A-Za-z0-9\-]/g, '-') + '-' + util.randomInteger(10, 99).toString()).replace(/^-+/, '')
+    if text
+      (text.dasherize().replace(/[^A-Za-z0-9\-]/g, '-') + '-' + util.randomInteger(10, 99).toString()).replace(/^-+/, '')
+    else
+      ''
 
   slugify: ($nameField, $slugField) ->
     $nameField.on 'input.slugify', (ev) =>

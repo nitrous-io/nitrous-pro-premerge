@@ -29,6 +29,15 @@ App.Host = klass = App.Model.extend
     @get('name') || @get('slug')
   ).property 'name', 'slug'
 
+  nameAndSlug: (->
+    name = @get 'name'
+    slug = @get 'slug'
+    if name && slug
+      "#{name} (#{slug})"
+    else
+      slug
+  ).property 'name', 'slug'
+
   containers: (->
     if id = @get('id')
       App.get('containers')?.filterBy('hostId', id)
@@ -44,15 +53,20 @@ App.Host = klass = App.Model.extend
       App.Volume.fetch(hostId: id).value
   ).property 'id'
 
+  images: (->
+    if id = @get('id')
+      App.Image.fetch(hostId: id).value
+  ).property 'id'
+
   region: (->
     if regionId = @get('regionId')
       App.get('regions').findBy('id', regionId)
-  ).property 'regionId'
+  ).property 'regionId', 'App.regions.@each'
 
   plan: (->
     if planId = @get('planId')
       App.get('plans').findBy('id', planId)
-  ).property 'planId'
+  ).property 'planId', 'App.plans.@each'
 
   selected: (->
     App.get('selectedHost') == this

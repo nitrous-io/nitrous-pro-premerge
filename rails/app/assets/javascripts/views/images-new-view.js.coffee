@@ -11,7 +11,7 @@ App.ImagesNewView = Em.View.extend
   selectedFileName: null
   dockerfileCode: null
 
-  disableCreateButton: (->
+  createButtonDisabled: (->
     !(
       @get('controller.name') && @get('controller.selectedHostSlug') && (
         (@get('selectedOption') == 'file' && @get('selectedFile')) ||

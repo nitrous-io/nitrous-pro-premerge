@@ -1,6 +1,7 @@
 package images
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -11,6 +12,16 @@ import (
 
 	"github.com/nitrous-io/nitrous/pkg/httperror"
 )
+
+type imageJSON struct {
+	ID          string `json:"id"`
+	HostID      int64  `json:"host_id"`
+	Name        string `json:"name"`
+	Tag         string `json:"tag"`
+	CreatedAt   int64  `json:"created_at"`
+	ActualSize  int64  `json:"actual_size"`
+	VirtualSize int64  `json:"virtual_size"`
+}
 
 var (
 	errIDOrNameRequired = httperror.New(http.StatusBadRequest, "invalid_request", "id or name is required")
@@ -32,9 +43,22 @@ func Index(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Req
 		return err
 	}
 
+	imageJSONs := make([]*imageJSON, 0, len(images))
+	for _, image := range images {
+		imageJSONs = append(imageJSONs, &imageJSON{
+			ID:          image.ID,
+			HostID:      h.ID,
+			Name:        image.Name,
+			Tag:         image.Tag,
+			CreatedAt:   image.CreatedAt,
+			ActualSize:  image.ActualSize,
+			VirtualSize: image.VirtualSize,
+		})
+	}
+
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
-		"images": images,
+		"images": imageJSONs,
 	}
 
 	return nil
@@ -50,11 +74,13 @@ func Build(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Req
 	if err != nil {
 		return errFileRequired
 	}
+	fmt.Println(fh)
 
 	name := r.FormValue("name")
 	if name == "" {
 		return errNameRequired
 	}
+	fmt.Println(name)
 
 	f, err := fh.Open()
 	if err != nil {

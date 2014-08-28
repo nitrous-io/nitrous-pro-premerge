@@ -9,6 +9,7 @@ import (
 
 type Volume struct {
 	ID        int64      `json:"id,omitempty"`
+	HostID    int64      `json:"host_id"`
 	Name      string     `json:"name,omitempty"`
 	Slug      string     `json:"slug"`
 	Size      uint64     `json:"size,omitempty"`
@@ -22,6 +23,7 @@ func SerializeVolume(v *volume.Volume) *Volume {
 	}
 	return &Volume{
 		ID:        v.ID,
+		HostID:    v.HostID,
 		Name:      v.Name,
 		Slug:      v.Slug,
 		CreatedAt: v.CreatedAt,

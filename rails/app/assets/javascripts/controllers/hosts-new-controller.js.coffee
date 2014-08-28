@@ -20,7 +20,7 @@ App.HostsNewController = Em.ObjectController.extend
   selectedPlan: (->
     if slug = @get('selectedPlanSlug')
       App.get('plans').findBy('slug', slug)
-  ).property 'selectedPlanSlug'
+  ).property 'selectedPlanSlug', 'App.plans.@each'
 
   actions:
     cancel: ->
