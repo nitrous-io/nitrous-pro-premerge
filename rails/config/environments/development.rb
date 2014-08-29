@@ -34,4 +34,6 @@ Rails.application.configure do
   config.qunit.stylesheets_path = '.'
 
   config.assets.precompile += %w(qunit.css qunit.js test_helper.js test_helper.css)
+
+  Slim::Engine.set_default_options pretty: true, sort_attrs: false
 end

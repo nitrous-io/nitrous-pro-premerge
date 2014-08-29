@@ -2,7 +2,9 @@
   ul.nav.left
     li
       link-to 'home.index'
-        h1.logo Nitrous.IO
+        h1.logo
+          | Nitrous
+          span .IO
   ul.nav.right
     if App.user
       li
@@ -39,7 +41,7 @@
       li
         a href='#' Features
       li
-        a href='#' Enterprise
+        a href='#' Documentation
       li
         a href='#' Blog
       li.primary

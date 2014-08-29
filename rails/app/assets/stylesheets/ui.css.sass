@@ -187,28 +187,29 @@ table.ui.table
   line-height: normal
   margin-left: 1px
 
+  &.raised
+    background: white
+    +light-shadow
+
   &:first-of-type
     margin-right: 0
 
   &:hover
-    background: rgba(153, 153, 153, .2)
+    background: #eaeaea
 
   &:focus
-    background: rgba(153, 153, 153, .3)
+    background: #d5d5d5
     outline: none
 
   &:active
-    background: rgba(153, 153, 153, .4)
-
-  &.raised
-    +light-shadow
+    background: #e0e0e0
 
   &.primary
     color: $lightBlue500
 
   &:disabled
     color: $gray400
-    background: rgba(153, 153, 153, .1)
+    background: #f4f4f4
 
   &.raised.primary
     background: $lightBlue500
@@ -222,7 +223,7 @@ table.ui.table
 
     &:disabled
       color: $gray400
-      background: rgba(204, 204, 204, .1)
+      background: #f9f9f9
 
   &.mini
     width: 30px
