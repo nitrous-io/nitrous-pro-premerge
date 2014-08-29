@@ -315,57 +315,34 @@ var _ = Describe("controllers/images", func() {
 	})
 
 	Describe("POST /api/v0/hosts/{slug}/images/pull", func() {
-		doRequest := func(host string, params *url.Values) {
+		doRequest := func(host string, params *url.Values) *httptest.ResponseRecorder {
+			res := httptest.NewRecorder()
 			req, err := NewAuthedFormRequest(t, "POST", fmt.Sprintf("/api/v0/hosts/%v/images/pull", host), params)
-			Expect(err).To(BeNil())
+			Expect(err).To(BeNil(), "failed to create images/pull request")
 			handler.ServeHTTP(res, req)
+			return res
 		}
 
-		It("responds with image on success", func() {
-			mockClient.PullImageReturn = &freighterclient.Image{
-				ID:   "pulledbeef",
-				Name: "scratch",
-				Tag:  "latest",
-			}
-			doRequest("foo", &url.Values{"repository": []string{"scratch"}})
-
+		It("calls PullImage", func() {
+			res := doRequest("foo", &url.Values{"repository": []string{"scratch"}})
 			Expect(mockClient.PullImageCalled).To(Equal(1))
 			Expect(res.Code).To(Equal(http.StatusOK))
-			j := struct {
-				Image freighterclient.Image `json:"image"`
-			}{}
-			err := json.NewDecoder(res.Body).Decode(&j)
-			Expect(err).To(BeNil())
-			Expect(j.Image.ID).To(Equal("pulledbeef"))
-			Expect(j.Image.Name).To(Equal("scratch"))
-			Expect(j.Image.Tag).To(Equal("latest"))
 		})
 
-		It("publishes an image.pulled event with the pulled image", func(done Done) {
-			mockClient.PullImageReturn = &freighterclient.Image{
-				ID:   "pulledbeef",
-				Name: "scratch",
-				Tag:  "latest",
-			}
-
+		It("publishes an image.pulled event with the pulled repo", func() {
 			ch := svr.Events.Subscribe(u.Topic())
 			defer svr.Events.Unsubscribe(ch, u.Topic())
-
 			doRequest("foo", &url.Values{"repository": []string{"scratch"}})
-
 			Expect(<-ch).To(Equal(&controllers.Event{
 				Name: "image.pulled",
-				Data: &freighterclient.Image{
-					ID:   "pulledbeef",
-					Name: "scratch",
-					Tag:  "latest",
+				Data: map[string]string{
+					"name": "scratch",
 				},
 			}))
-			close(done)
 		})
 
 		It("requires repository param", func() {
-			doRequest("foo", nil)
+			res := doRequest("foo", nil)
 			Expect(mockClient.PullImageCalled).To(Equal(0))
 			errType, errDesc := ErrorSlug(res.Body)
 			Expect(errType).To(Equal("invalid_request"))
@@ -374,7 +351,7 @@ var _ = Describe("controllers/images", func() {
 
 		It("returns 500 on freighterclient error", func() {
 			mockClient.PullImageError = &freighterclient.StatusError{418}
-			doRequest("foo", &url.Values{"repository": []string{"scratch"}})
+			res := doRequest("foo", &url.Values{"repository": []string{"scratch"}})
 			Expect(mockClient.PullImageCalled).To(Equal(1))
 			errType, _ := ErrorSlug(res.Body)
 			Expect(errType).To(Equal("internal_server_error"))

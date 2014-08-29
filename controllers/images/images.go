@@ -8,6 +8,7 @@ import (
 	"github.com/nitrous-io/nitrous/controllers"
 	"github.com/nitrous-io/nitrous/middleware"
 	"github.com/nitrous-io/nitrous/models/host"
+	"github.com/nitrous-io/nitrous/pkg/flusher"
 
 	"github.com/nitrous-io/nitrous/pkg/httperror"
 )
@@ -105,30 +106,32 @@ func Remove(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Re
 }
 
 func Pull(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
-	cl, err := controllers.NewFreighterClient(env.DB, h)
-	if err != nil {
-		return err
-	}
-
 	repo := r.FormValue("repository")
 	if repo == "" {
 		return errRepoRequired
 	}
 
-	image, err := cl.PullImage(repo)
+	cl, err := controllers.NewFreighterClient(env.DB, h)
 	if err != nil {
 		return err
 	}
 
+	// stream back the download progress so the client can format and display
+	// it nicely
+	stream := flusher.NewWriteFlusher(w)
+	if err := cl.PullImage(repo, stream); err != nil {
+		return err
+	}
+
+	// because PullImage just operates on the stream and  doesnt return images,
+	// lets just publish the pulled repo here to signal user that the image(s)
+	// should be updated now
 	env.Events.Publish(
-		controllers.NewEvent("image.pulled", image),
+		controllers.NewEvent("image.pulled", map[string]string{
+			"name": repo,
+		}),
 		env.User.Topic(),
 	)
-	env.Status = http.StatusOK
-	env.Data = map[string]interface{}{
-		"status": "OK",
-		"image":  image,
-	}
 	return nil
 }
 
