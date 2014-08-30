@@ -1,0 +1,70 @@
+#masthead
+  .container
+    h1
+      | Nitrous
+      span Kit
+
+
+    h2.subtitle
+      | the fastest way to get working on your project
+
+    .installs
+      ul
+        li.mac
+          a href="#apple" Mac OS X
+        li.win
+          a href="#win" Windows
+        li.lin
+          a href="#linux" Debian/Ubuntu
+
+    .apple
+      button.ui.btn.raised.sign-up-btn href="/"
+        | Download Nitrous Kit for Mac OS X
+    .windows
+      button.ui.btn.raised.sign-up-btn href="/"
+        | Download Nitrous Kit for Windows
+    .linux
+      button.ui.btn.raised.sign-up-btn href="/"
+        | Download Nitrous Kit for Linux
+
+#instructions
+  .container
+    .overview
+      h3 Whats in the Kit?
+      ul
+        li
+          a href="/" title="cli" Nitro CLI
+          |  - our CLI tool for managing your project's infrastructure and services
+
+    .installs
+      .apple
+        h3 Mac OS X
+        ol
+          li Download and run the Nitrous.IO Command Line Interface (CLI) Installer Package for OS X.
+          li In Terminal, type nitro login and enter your Nitrous.IO username and password.
+
+      .windows
+        h3 Windows
+
+      .linux
+        h3 Debian/Ubuntu
+
+        ol
+          li
+            | Add the ______ repository key to your local keychain.
+            pre
+              code sudo apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 6B19EAE0
+
+            p Then, add the ______ repository to your apt-sources list.
+            pre
+              code echo "deb https://get.nitrous.io nitrous main" | sudo tee /etc/apt/sources.list.d/nitrous.list
+
+          li
+            | Update and install the Nitrous.IO Command Line Interface (CLI)
+            pre
+              code sudo apt-get update
+            pre
+              code sudo apt-get install -yq nitro
+
+          li Type nitro login and enter your username and password.
+
