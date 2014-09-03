@@ -4,4 +4,7 @@ class PagesController < ApplicationController
 
   def kit
   end
+
+  def about
+  end
 end
