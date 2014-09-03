@@ -1,3 +1,6 @@
+= content_for :title
+  | NitrousKit · Nitrous.IO
+
 #masthead
   .container
     h1
@@ -11,21 +14,28 @@
     .installs
       ul
         li.mac
-          a href="#apple" Mac OS X
+          a href="#apple"
+            = image_tag 'osx400.png'
+            span.title Mac OS X
         li.win
-          a href="#win" Windows
+          a href="#windows"
+            = image_tag 'win400.png'
+            span.title  Windows
         li.lin
-          a href="#linux" Debian/Ubuntu
+          a href="#linux"
+            = image_tag 'linux400.png'
+            span.title Debian/Ubuntu
 
-    .apple
-      button.ui.btn.raised.sign-up-btn href="/"
-        | Download Nitrous Kit for Mac OS X
-    .windows
-      button.ui.btn.raised.sign-up-btn href="/"
-        | Download Nitrous Kit for Windows
-    .linux
-      button.ui.btn.raised.sign-up-btn href="/"
-        | Download Nitrous Kit for Linux
+    .action-button
+      .apple
+        button.ui.btn.raised.sign-up-btn href="/"
+          | Download Nitrous Kit for Mac OS X
+      .windows
+        button.ui.btn.raised.sign-up-btn href="/"
+          | Download Nitrous Kit for Windows
+      .linux
+        button.ui.btn.raised.sign-up-btn href="/"
+          | Download Nitrous Kit for Linux
 
 #instructions
   .container
@@ -68,3 +78,6 @@
 
           li Type nitro login and enter your username and password.
 
+= content_for :script
+  javascript:
+    pages.kit.initialize()
