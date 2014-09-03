@@ -21,15 +21,21 @@ window.pages =
       @showHidePlatform()
 
     showHidePlatform: ->
+      $('.mac').removeClass('active')
+      $('.win').removeClass('active')
+      $('.lin').removeClass('active')
       if location.hash == '#apple'
+        $('.mac').addClass('active')
         $('.windows').hide()
         $('.linux').hide()
         $('.apple').show()
       else if location.hash == '#windows'
+        $('.win').addClass('active')
         $('.apple').hide()
         $('.linux').hide()
         $('.windows').show()
       else
+        $('.lin').addClass('active')
         $('.apple').hide()
         $('.windows').hide()
         $('.linux').show()

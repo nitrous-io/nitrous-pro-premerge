@@ -9,7 +9,7 @@
 
 
     h2.subtitle
-      | the fastest way to get working on your project
+      | setup a new application environment in seconds
 
     .installs
       ul
@@ -28,13 +28,16 @@
 
     .action-button
       .apple
-        button.ui.btn.raised.sign-up-btn href="/"
+        button.ui.btn.raised.primary href="/"
+          i.fa.fa-download.btn-icon style="margin-right: 8px"
           | Download Nitrous Kit for Mac OS X
       .windows
-        button.ui.btn.raised.sign-up-btn href="/"
+        button.ui.btn.raised.primary href="/"
+          i.fa.fa-download.btn-icon style="margin-right: 8px"
           | Download Nitrous Kit for Windows
       .linux
-        button.ui.btn.raised.sign-up-btn href="/"
+        button.ui.btn.raised.primary href="/"
+          i.fa.fa-download.btn-icon style="margin-right: 8px"
           | Download Nitrous Kit for Linux
 
 #instructions
@@ -55,6 +58,8 @@
 
       .windows
         h3 Windows
+        ol
+          li Download and run the Nitrous.IO Installer Package for Windows.
 
       .linux
         h3 Debian/Ubuntu
@@ -78,6 +83,36 @@
 
           li Type nitro login and enter your username and password.
 
+
+      h3 Getting started
+      p Once you've installed the kit, you'll have access to the `nitro` command from the command line. Log in using the email address and password you used when creating your Nitrous  account:
+
+      pre
+        code
+          |
+            $ nitro login
+            Enter your Nitrous credentials.
+            Email: adam@example.com
+            Password:
+            Could not find an existing public key.
+            Would you like to generate one? [Yn]
+            Generating new SSH public key.
+            Uploading ssh public key /Users/adam/.ssh/id_rsa.pub
+            You're now ready to create your first Nitrous app:
+
+      pre
+        code
+          |
+            $ nitro host create
+            Creating didactic-frog-357... done.
+
+    h3 More Information
+
+    p
+      ' For more information and complete documentation, please consult:
+      a href="http://docs.nitrous.io/nitrouskit" http://docs.nitrous.io/nitrouskit
+
 = content_for :script
   javascript:
     pages.kit.initialize()
+

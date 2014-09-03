@@ -1,4 +1,5 @@
 @import 'variables'
+@import 'mixins'
 
 html.pages.kit
 
@@ -6,7 +7,7 @@ html.pages.kit
     display: none
 
   #masthead
-    padding: 48px 0
+    padding: 24px 0 36px
     background: $gray100
     text-align: center
     border-bottom: 1px solid #e0e0e0
@@ -16,29 +17,56 @@ html.pages.kit
         color: $gray500
 
     h2
-      color: $gray600
+      color: $gray500
       font-size: 20px
 
     .installs
       margin: 36px 0
       ul
         margin: 0
+        padding: 0
         display: block
-        clear: both
         li
           display: inline-block
           list-style-type: none
           text-align: center
-          width: 180px
+          margin-right: 32px
+          &:last-child
+            margin-right: 0
           a
+            display: block
+            +card
+            background: $gray200
+            width: 220px
+            padding: 16px
             text-align: center
+            color: $gray400
             span.title
               padding: 12px
-          img
-            display: block
-            width: 100px
-            margin: 0 auto
-            margin-bottom: 16px
+            img
+              opacity: 0.6
+              display: block
+              width: 100px
+              margin: 0 auto
+              margin-bottom: 16px
+            &:hover
+              background: $gray100
+              span.title
+                color: $gray600
+              img
+                opacity: 0.9
+                -webkit-transition: all .3s
+                transition: all .3s
+          &.active
+            a
+              background: #fff
+              span.title
+                color: $gray800
+            img
+              opacity: 1.0
+            &:hover
+              img
+                opacity: 1.0
 
       .action-button
         margin: 16px 0 24px
@@ -46,6 +74,13 @@ html.pages.kit
   #instructions
     clear: both
     margin: 36px 0
+
+    pre
+      padding: 12px
+      line-height: 18px
+      background: $gray900
+      color: $gray100
+      border-radius: 2px
 
     .overview
       li
