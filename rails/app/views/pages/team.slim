@@ -1,0 +1,26 @@
+= content_for :title
+  | Team · Nitrous.IO
+
+.container
+  = render 'layouts/subnav.slim'
+
+  h1 Nitrous Team
+
+  .subtitle We&rsquo;re looking for remarkable people to help us change the way the world codes.  We have offices in the heart of Chinatown in Singapore and in the SOMA district of San Francisco, California.
+
+  button.ui.btn.raised.primary href="/jobs"
+    i.fa.fa-arrow-right style="margin-right: 8px"
+    | View Open Job Posts
+
+  hr
+
+  article.bios
+    ul#team-bios
+      - @members.each do |m|
+        li
+          a.tt-info rel="tooltip" target="_blank" href="http://twitter.com/#{m['twitter']}" data-toggle="tooltip" data-placement="top" name="#{m['name']}" title="<em>#{m['name']}</em> #{m['bio']}"
+            = image_tag "#{m['img']}.jpg", title: "#{m['name']}"
+
+= content_for :script
+  javascript:
+    pages.team.initialize()

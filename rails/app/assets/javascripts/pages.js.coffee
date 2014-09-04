@@ -39,3 +39,7 @@ window.pages =
         $('.apple').hide()
         $('.windows').hide()
         $('.linux').show()
+
+  team:
+    initialize: ->
+      $("[rel='tooltip']").tooltip(html: true)

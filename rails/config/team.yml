@@ -1,0 +1,60 @@
+- name: AJ Solimine
+  twitter: ajhit406
+  bio: "AJ loves baseball, surfing, and networked home appliances. He studied economics at Harvard. He is obsessed with microformats."
+  img: solimine
+- name: Peter Jihoon Kim
+  twitter: raingrove
+  bio: "Pete started programming at the age of 8, when most kids were still picking their nose. He likes riding his fixed gear bicycle and shooting airsoft guns."
+  img: pete
+- name: Arun Thampi
+  twitter: iamclovin
+  bio: "Arun worked at Palm in the early 2000's, and was rumored to have developed the first iPhone prototype that Steve Jobs stole for Apple."
+  img: arun
+- name: Daniel Dao
+  twitter: dqminh
+  bio: "Daniel is such a nice guy, he gives away all the code he writes to open source."
+  img: daniel
+- name: Lakshan Perera
+  twitter: laktek
+  bio: "Lakshan tweets more than he speaks. He also only speaks 140 characters at a time."
+  img: lakshan
+- name: Greg McKeever
+  twitter: gmckeever
+  bio: "Greg works with customers and code to ensure that Nitrous.IO offers everything a developer could ever ask for."
+  img: greg
+- name: Cheah Chu Yeow
+  twitter: chuyeow
+  bio: "Chu Yeow likes: Miyo (his tortoiseshell cat), Japan, anime. Dislikes: trailing whitespace, tabs."
+  img: chuyeow
+- name: Sandeep Chivukula
+  twitter: _sandeep
+  bio: "Sandeep is passionate making customers happy and partners successful. He has a Harvard MBA so we only let him code under supervision."
+  img: chivukula
+- name: RJ Tinio
+  twitter: ctrlaltreboot
+  bio: "RJ likes table. RJ likes pen. RJ likes you. RJ. RJ. RJ!!!"
+  img: rjay
+- name: Timothy Goh
+  twitter: keyist
+  bio: "A frenzy of keyboard activity in multiplexed terminals. Sometimes sounds pretentious, often actually is."
+  img: tim
+- name: Betty Kayton
+  twitter: bettykayton
+  bio: "Betty is an accomplished financial and operations professional. Finance and accounting are her passion."
+  img: betty
+- name: David Dollar
+  twitter: ddollar
+  bio: "David has automated all the things, including his home lighting, and his email reading, which a virtual assistant handles each morning when he opens his office door."
+  img: dollar
+- name: Andi Martinez
+  twitter:
+  bio: "Andi is multilingual, a world traveller, and is the glue that keeps the team organized. From awesome events to projects and payroll, she does it all!"
+  img: martinez
+- name: Eric Huang
+  twitter:
+  bio: "Eric is a college intern from Singapore - he’s one of the few on the team who prefers writing prose to writing code. We plan to change that, eventually."
+  img: huang
+- name: Marshall Choi
+  twitter: mars0005
+  bio: "Marshall spends all of his time thinking of ways to find amazing people to join team Nitrous."
+  img: choi
