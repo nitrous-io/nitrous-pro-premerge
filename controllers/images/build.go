@@ -30,7 +30,9 @@ type buildContext struct {
 // build sends the build context to freighter in a goroutine. If we want an
 // async build, this returns immediately with the current stored image,
 // otherwise, the image is updated with new data after the build is done.
-func (c *buildContext) build(async bool) (*image.Image, error) {
+//
+// this also returns the recommended HTTP status for user's convenient
+func (c *buildContext) build(async bool) (*image.Image, int, error) {
 	ch := make(chan *buildResult, 1)
 	env, cl, img, slug, input := c.env, c.client, c.img, c.slug, c.input
 
@@ -62,13 +64,13 @@ func (c *buildContext) build(async bool) (*image.Image, error) {
 	// if the build is async, we will just return the stored image immmediately
 	// without waiting for result from freighter
 	if async {
-		return img, nil
+		return img, http.StatusAccepted, nil
 	}
 	r := <-ch
 	if r.err != nil {
-		return nil, r.err
+		return nil, 0, r.err
 	}
-	return r.Image, nil
+	return r.Image, http.StatusOK, nil
 }
 
 func Build(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
@@ -111,15 +113,13 @@ func Build(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Req
 
 	ctx := &buildContext{env: env, client: cl, img: img, slug: slug, input: f}
 	async, _ := strconv.ParseBool(r.FormValue("async"))
-	img, err = ctx.build(async)
+
+	var st int
+	img, st, err = ctx.build(async)
 	if err != nil {
 		return err
 	}
-	if async {
-		env.Status = http.StatusAccepted
-	} else {
-		env.Status = http.StatusOK
-	}
+	env.Status = st
 	env.Data = map[string]interface{}{
 		"image": serializers.SerializeImage(img),
 	}
