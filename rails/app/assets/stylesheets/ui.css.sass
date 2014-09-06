@@ -207,6 +207,10 @@ table.ui.table
   &.primary
     color: $lightBlue500
 
+  &.action
+    background: $green300
+    color: $gray100
+
   &:disabled
     color: $gray400
     background: #f4f4f4
@@ -224,6 +228,16 @@ table.ui.table
     &:disabled
       color: $gray400
       background: #f9f9f9
+
+  &.raised.action
+    background: $green400
+    color: white
+
+    &:hover
+      background: $green300
+
+    &:active
+      background: $green500
 
   &.mini
     width: 30px

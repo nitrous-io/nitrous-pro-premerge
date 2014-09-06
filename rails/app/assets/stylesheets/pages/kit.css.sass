@@ -8,20 +8,25 @@ html.pages.kit
 
   #masthead
     padding: 24px 0 36px
-    background: $gray100
+    background-color: #154866
+    background: radial-gradient(circle farthest-side at right bottom, #5598a6 8%,#154866 70%,#000)
     text-align: center
-    border-bottom: 1px solid #e0e0e0
+    border-bottom: 1px solid $gray600
+
+    h1, h2
+      text-shadow: 1px 1px 1px rgba(0,0,0,0.5)
 
     h1
+      color: #fff
       span
-        color: $gray500
+        color: $lightBlue100
 
     h2
-      color: $gray500
-      font-size: 20px
+      color: #a8d9e8
+      font-size: 18px
 
     .installs
-      margin: 36px 0
+      margin: 32px 0
       ul
         margin: 0
         padding: 0
@@ -30,13 +35,11 @@ html.pages.kit
           display: inline-block
           list-style-type: none
           text-align: center
-          margin-right: 32px
+          margin-right: 24px
           &:last-child
             margin-right: 0
           a
             display: block
-            +card
-            background: $gray200
             width: 220px
             padding: 16px
             text-align: center
@@ -44,32 +47,38 @@ html.pages.kit
             span.title
               padding: 12px
             img
-              opacity: 0.6
+              opacity: 0.3
               display: block
               width: 100px
               margin: 0 auto
               margin-bottom: 16px
             &:hover
-              background: $gray100
               span.title
-                color: $gray600
+                color: $gray200
               img
                 opacity: 0.9
                 -webkit-transition: all .3s
                 transition: all .3s
           &.active
             a
-              background: #fff
               span.title
-                color: $gray800
+                color: $gray50
+                text-shadow: 1px 1px 1px rgba(0,0,0,0.5)
             img
               opacity: 1.0
             &:hover
               img
                 opacity: 1.0
+            &:last-child
+              a
+                span.title
+                  text-shadow: 1px 1px 1px rgba(0,0,0,0.3)
 
-      .action-button
-        margin: 16px 0 24px
+    .action-button
+      .ui.btn.action
+        font-weight: 300
+        text-transform: capitalize
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.2)
 
   #instructions
     clear: both

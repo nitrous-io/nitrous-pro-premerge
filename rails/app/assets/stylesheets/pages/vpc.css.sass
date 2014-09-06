@@ -1,0 +1,48 @@
+@import 'variables'
+@import 'mixins'
+
+html.pages.vpc
+
+  #masthead
+    padding: 24px 0 36px
+    background-color: #154866
+    background: linear-gradient(#5598a6,#154866)
+    text-align: center
+    border-bottom: 1px solid $lightBlue800
+
+    h1, h2
+      text-shadow: 1px 1px 1px rgba(0,0,0,0.5)
+
+    h1
+      color: #fff
+
+    h2
+      color: #a8d9e8
+      font-size: 18px
+
+    .signup-container
+      width: 620px
+      margin: 36px auto
+      form#vpc-signup
+        margin: 0
+        input
+          border: 1px solid $gray300
+          background: #fff
+          padding: 20px 12px
+          font-size: 20px
+          line-height: 28px
+          border-radius: 2px
+          width: 420px
+          float: left
+          &:focus
+            border: 1px solid $lightBlue500
+      .subform
+        color: #88b9c8
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.3)
+        font-size: 14px
+        margin: 5px 2px
+        text-align: left
+        a
+          color: #6899a9
+          &:hover
+            color: #c9e9ff

@@ -4,5 +4,6 @@ Rails.application.routes.draw do
   get '/kit'    => 'pages#kit'
   get '/about'  => 'pages#about'
   get '/team'   => 'pages#team'
+  get '/vpc'    => 'pages#vpc'
   root 'web_app#index'
 end

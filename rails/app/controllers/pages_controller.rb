@@ -11,4 +11,7 @@ class PagesController < ApplicationController
   def team
     @members = YAML.load(File.read(File.join(Rails.root, 'config', 'team.yml'))).shuffle
   end
+
+  def vpc
+  end
 end
