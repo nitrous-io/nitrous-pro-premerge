@@ -244,25 +244,28 @@ func create(h runningHost, env *middleware.Env, w http.ResponseWriter, r *http.R
 		log.Errorf("containers.create: successfully created container '%+v' in Freighter but failed to update database with '%+v'", created, cn)
 	}
 
-	// Insert or update image record (the one used to create this container).
-	repo, tag := image.ParseRepoAndTag(imageSlug)
-	if tag == "" {
-		tag = image.DefaultTag
-	}
-	img := &image.Image{
-		UserID:      env.User.ID,
-		HostID:      h.ID,
-		FreighterID: created.ImageID,
-		Slug:        repo,
-		Tag:         tag,
-	}
-	existing, err := image.Find(db, env.User, h, imageSlug)
-	if err == nil {
-		img.ID = existing.ID
-		img.Name = existing.Name
-	}
-	if err := img.InsertOrUpdate(db); err != nil { // log and continue
-		env.Logger.Errorf("containers.create: failed to insert or update image '%+v'", img)
+	// If image doesn't already exist, create a record.
+	if _, err := image.Find(db, env.User, h, imageSlug); err == sql.ErrNoRows {
+		repo, tag := image.ParseRepoAndTag(imageSlug)
+		if tag == "" {
+			tag = image.DefaultTag
+		}
+		img := &image.Image{
+			UserID:      env.User.ID,
+			HostID:      h.ID,
+			FreighterID: created.ImageID,
+			Slug:        repo,
+			Tag:         tag,
+		}
+
+		if err := img.Insert(db); err != nil { // log and continue
+			env.Logger.Errorf("containers.create: failed to insert image '%+v'", img)
+		} else {
+			env.Events.Publish(
+				controllers.NewEvent("image.created", serializers.SerializeImage(img)),
+				env.User.Topic(),
+			)
+		}
 	}
 
 	for _, v := range volumeSlugs(config.Mounts) {
@@ -273,14 +276,6 @@ func create(h runningHost, env *middleware.Env, w http.ResponseWriter, r *http.R
 	}
 
 	publishContainerEvent(env, "container.created", cn)
-	imgEvt := "image.created"
-	if existing != nil {
-		imgEvt = "image.updated"
-	}
-	env.Events.Publish(
-		controllers.NewEvent(imgEvt, serializers.SerializeImage(img)),
-		env.User.Topic(),
-	)
 
 	env.Status = http.StatusCreated
 	env.Data = map[string]interface{}{

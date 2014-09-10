@@ -737,10 +737,7 @@ var _ = Describe("controllers/containers", func() {
 			close(done)
 		})
 
-		It("updates an existing image record if image already exists", func(done Done) {
-			ch := svr.Events.Subscribe(u.Topic())
-			defer svr.Events.Unsubscribe(ch, u.Topic())
-
+		It("does not create a new image record if image already exists", func() {
 			existing := &image.Image{
 				UserID:      hs.U.ID,
 				HostID:      hs.H.ID,
@@ -757,29 +754,10 @@ var _ = Describe("controllers/containers", func() {
 
 			doRequest("valid-token", "foo", params)
 
-			i, err := image.Find(db, u, hs.H, "existing-image:mytag")
+			images, err := image.FindAll(db, u, hs.H)
 			Expect(err).To(BeNil())
-			Expect(i.ID).To(Equal(existing.ID))
-			Expect(i.UserID).To(Equal(u.ID))
-			Expect(i.HostID).To(Equal(hs.H.ID))
-			Expect(i.FreighterID).To(Equal("abc123"))   // Updated.
-			Expect(i.Slug).To(Equal("existing-image"))  // Unchanged.
-			Expect(i.Tag).To(Equal("mytag"))            // Unchanged.
-			Expect(i.Name).To(Equal("My Elixir Image")) // Unchanged.
-
-			var evt *controllers.Event
-			for msg := range ch { // Ignore all events except image.updated.
-				e, ok := msg.(*controllers.Event)
-				if ok && e.Name == "image.updated" {
-					evt = e
-					break
-				}
-			}
-			Expect(evt).To(Equal(&controllers.Event{
-				Name: "image.updated",
-				Data: serializers.SerializeImage(i),
-			}))
-			close(done)
+			Expect(images).To(HaveLen(1))
+			Expect(images[0]).To(Equal(existing))
 		})
 
 		It("converts the 'slug' form value to lowercase", func() {
