@@ -1837,6 +1837,44 @@ var _ = Describe("controllers/containers", func() {
 				Expect(publishAll).To(BeTrue())
 			})
 		})
+
+		Context("cmd option", func() {
+			It("defaults to nil", func() {
+				cmd := getConfs().Cmd
+				Expect(cmd).To(BeNil())
+			})
+
+			cases := []struct {
+				input    string
+				expected []string
+				errMsg   string
+			}{
+				{"/bin/bash", []string{"/bin/bash"}, ""},
+				{"./foo `echo $SHELL`", []string{"./foo", "`echo $SHELL`"}, ""},
+				{"/bin/sh -c echo 'test this please' ",
+					[]string{"/bin/sh", "-c", "echo", "test this please"}, ""},
+				{"echo $(rm /tmp/ohnoes) ohno",
+					[]string{"echo", "$(rm", "/tmp/ohnoes)", "ohno"}, ""},
+				{"/bin/cmd\\ with\\ space arg1 arg2",
+					[]string{"/bin/cmd with space", "arg1", "arg2"}, ""},
+				{"unclosed quote '", []string{}, "container cmd invalid"},
+			}
+
+			for _, c2 := range cases {
+				c := c2
+				It(fmt.Sprintf("handles input: %s", c.input), func() {
+					form.Add("cmd", c.input)
+					fcc, err := containers.PrepareConfig(form, hv)
+					if c.errMsg != "" {
+						Expect(err).NotTo(BeNil())
+						Expect(err.Error()).To(ContainSubstring(c.errMsg))
+					} else {
+						Expect(err).To(BeNil())
+						Expect(fcc.Cmd).To(Equal(c.expected))
+					}
+				})
+			}
+		})
 	})
 
 	Describe("POST /containers/{name}/reconfig", func() {
