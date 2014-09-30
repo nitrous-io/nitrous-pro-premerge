@@ -939,6 +939,26 @@ var _ = Describe("controllers/images", func() {
 			return res
 		}
 
+		It("publishes an image pushing event before starting the image push", func(done Done) {
+			ch := svr.Events.Subscribe(u.Topic())
+			defer svr.Events.Unsubscribe(ch, u.Topic())
+
+			doRequest("foo", "nitrousio/devenv:latest", &url.Values{"destination": []string{"myuser/scratch"}})
+
+			msg := <-ch
+			evt, ok := msg.(*controllers.Event)
+			Expect(ok).To(BeTrue())
+			Expect(evt.Name).To(Equal(controllers.EventImagePushing))
+			Expect(evt.Data).To(BeEquivalentTo(struct {
+				Image       string `json:"image"`
+				Destination string `json:"destination"`
+			}{
+				Image:       "nitrousio/devenv:latest",
+				Destination: "myuser/scratch",
+			}))
+			close(done)
+		})
+
 		It("calls PushImage", func() {
 			res := doRequest("foo", "nitrousio/devenv:latest", &url.Values{"destination": []string{"myuser/scratch"}})
 			Expect(mockClient.PushImageCalled).To(Equal(1))
@@ -950,6 +970,9 @@ var _ = Describe("controllers/images", func() {
 			defer svr.Events.Unsubscribe(ch, u.Topic())
 
 			doRequest("foo", "nitrousio/devenv:latest", &url.Values{"destination": []string{"myuser/scratch"}})
+
+			// skip the first message (image.pushing)
+			<-ch
 
 			msg := <-ch
 			evt, ok := msg.(*controllers.Event)

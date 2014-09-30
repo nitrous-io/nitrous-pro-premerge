@@ -177,6 +177,16 @@ func Push(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Requ
 		return errDestRequired
 	}
 
+	type data struct {
+		Image       string `json:"image"`
+		Destination string `json:"destination"`
+	}
+
+	env.Events.Publish(
+		controllers.NewEvent(controllers.EventImagePushing, data{Image: image, Destination: dest}),
+		env.User.Topic(),
+	)
+
 	if err := cl.PushImage(image, dest); err != nil {
 		if err == freighterclient.ErrImagePushAuthRequired {
 			env.Status = http.StatusUnauthorized
@@ -189,10 +199,6 @@ func Push(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Requ
 		return err
 	}
 
-	type data struct {
-		Image       string `json:"image"`
-		Destination string `json:"destination"`
-	}
 	env.Events.Publish(
 		controllers.NewEvent(controllers.EventImagePushed, data{Image: image, Destination: dest}),
 		env.User.Topic(),

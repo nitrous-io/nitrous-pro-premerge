@@ -26,6 +26,7 @@ const (
 	EventImagePullFailed    EventName = "image.pull_failed"
 	EventImageTagged        EventName = "image.tagged"
 	EventImagePushed        EventName = "image.pushed"
+	EventImagePushing       EventName = "image.pushing"
 	EventImageRemoved       EventName = "image.removed"
 	EventRegistryAdded      EventName = "registry.added"
 	EventRegistryRemoved    EventName = "registry.removed"
