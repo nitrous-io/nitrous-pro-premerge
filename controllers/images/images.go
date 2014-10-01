@@ -128,7 +128,7 @@ func findImagesInHosts(db db.QueryReceiver, hosts []host.Host) ([]*freighterclie
 
 func findMatchingFreighterImage(i *image.Image, images []*freighterclient.Image) *freighterclient.Image {
 	for _, fImg := range images {
-		if fImg.ID == i.FreighterID && fImg.Name == i.Slug && i.Tag == i.Tag {
+		if fImg.ID == i.FreighterID && fImg.Name == i.Slug && fImg.Tag == i.Tag {
 			return fImg
 		}
 	}
