@@ -67,9 +67,8 @@ var _ = Describe("controllers/hosts", func() {
 		res             *httptest.ResponseRecorder
 		authTokenInputs AuthTokenInputs
 
-		u  *user.User
-		t  *token.Token
-		hs *HostStack
+		u *user.User
+		t *token.Token
 	)
 
 	BeforeEach(func() {
@@ -485,7 +484,10 @@ var _ = Describe("controllers/hosts", func() {
 	})
 
 	Describe("DELETE /api/v0/hosts/{slug}", func() {
-		var c *container.Container
+		var (
+			hs *HostStack
+			c  *container.Container
+		)
 
 		doRequest := func(slug string) {
 			req, err := NewRequest("DELETE", "/api/v0/hosts/"+slug, nil)
@@ -663,6 +665,8 @@ var _ = Describe("controllers/hosts", func() {
 	})
 
 	Describe("POST /api/v0/hosts/{slug}/start", func() {
+		var hs *HostStack
+
 		doRequest := func(slug string) {
 			req, err := NewRequest("POST", "/api/v0/hosts/"+slug+"/start", nil)
 			Expect(err).To(BeNil())
@@ -791,8 +795,10 @@ var _ = Describe("controllers/hosts", func() {
 	})
 
 	Describe("POST /api/v0/hosts/{slug}/stop", func() {
-		doRequest := func(slug string) {
-			req, err := NewRequest("POST", "/api/v0/hosts/"+slug+"/stop", nil)
+		var hs *HostStack
+
+		doRequest := func(slug string, params *url.Values) {
+			req, err := NewFormRequest("POST", "/api/v0/hosts/"+slug+"/stop", params)
 			Expect(err).To(BeNil())
 			req.Header.Set("Authorization", "Bearer valid-token")
 			handler.ServeHTTP(res, req)
@@ -823,7 +829,7 @@ var _ = Describe("controllers/hosts", func() {
 				hs.H.State = host.StateStopped
 				err := hs.H.Update(db)
 				Expect(err).To(BeNil())
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 
 				Expect(res.Code).To(Equal(http.StatusBadRequest))
 
@@ -845,14 +851,14 @@ var _ = Describe("controllers/hosts", func() {
 			})
 
 			It("updates the host state to stopped", func() {
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 				h, err := host.Find(db, hs.U, hs.H.Slug)
 				Expect(err).To(BeNil())
 				Expect(h.State).To(Equal(host.StateStopped))
 			})
 
 			It("responds with the host and status OK", func() {
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 				Expect(res.Code).To(Equal(http.StatusOK))
 
 				var j struct {
@@ -878,7 +884,7 @@ var _ = Describe("controllers/hosts", func() {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
 
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 
 				h, err := host.Find(db, hs.U, hs.H.Slug)
 				Expect(err).To(BeNil())
@@ -900,7 +906,7 @@ var _ = Describe("controllers/hosts", func() {
 
 				hosts.HostbuilderClient = hb
 
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 			})
 
 			It("responds with HTTP 500 Internal Server Error", func() {
@@ -956,17 +962,26 @@ var _ = Describe("controllers/hosts", func() {
 			})
 
 			It("calls stop on all containers", func() {
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 				Expect(res.Code).To(Equal(http.StatusOK))
 				Expect(mockClient.StopCalled).To(Equal(2))
 			})
 
 			It("returns error if stop failed", func() {
 				mockClient.StopError = errors.New("can't stop won't stop")
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 				Expect(mockClient.StopCalled).To(Equal(2))
 				_, errDesc := ErrorSlug(res.Body)
 				Expect(errDesc).To(Equal("unable to stop containers rails-box, python-box"))
+			})
+
+			It("ignores stop failures if ignore-containers param is true", func() {
+				mockClient.StopError = errors.New("can't stop won't stop")
+				params := &url.Values{}
+				params.Set("ignore-containers", "true")
+				doRequest(hs.H.Slug, params)
+				Expect(mockClient.StopCalled).To(Equal(2))
+				Expect(res.Code).To(Equal(http.StatusOK))
 			})
 
 			checkStoppedMsg := func(msg interface{}, slug string) {
@@ -982,7 +997,7 @@ var _ = Describe("controllers/hosts", func() {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
 
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 
 				msg := <-ch
 				checkStoppedMsg(msg, c1.Slug)
@@ -1004,8 +1019,10 @@ var _ = Describe("controllers/hosts", func() {
 	})
 
 	Describe("POST /api/v0/hosts/{slug}/restart", func() {
-		doRequest := func(slug string) {
-			req, err := NewRequest("POST", "/api/v0/hosts/"+slug+"/restart", nil)
+		var hs *HostStack
+
+		doRequest := func(slug string, params *url.Values) {
+			req, err := NewFormRequest("POST", "/api/v0/hosts/"+slug+"/restart", params)
 			Expect(err).To(BeNil())
 			req.Header.Set("Authorization", "Bearer valid-token")
 			handler.ServeHTTP(res, req)
@@ -1014,7 +1031,10 @@ var _ = Describe("controllers/hosts", func() {
 		BeforeEach(func() {
 			var err error
 			hs, err = CreateHostStack(db, &HostStack{
-				H: &host.Host{State: host.StateRunning},
+				H: &host.Host{
+					State:     host.StateRunning,
+					IPAddress: sql.NullString{"127.0.0.1", true},
+				},
 				U: u,
 			})
 			Expect(err).To(BeNil())
@@ -1033,7 +1053,7 @@ var _ = Describe("controllers/hosts", func() {
 				hs.H.State = host.StateStopped
 				err := hs.H.Update(db)
 				Expect(err).To(BeNil())
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 
 				Expect(res.Code).To(Equal(http.StatusBadRequest))
 
@@ -1055,14 +1075,14 @@ var _ = Describe("controllers/hosts", func() {
 			})
 
 			It("updates the host state to running", func() {
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 				h, err := host.Find(db, hs.U, hs.H.Slug)
 				Expect(err).To(BeNil())
 				Expect(h.State).To(Equal(host.StateRunning))
 			})
 
 			It("responds with the host and status OK", func() {
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 				Expect(res.Code).To(Equal(http.StatusOK))
 
 				var j struct {
@@ -1088,7 +1108,7 @@ var _ = Describe("controllers/hosts", func() {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
 
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 
 				h, err := host.Find(db, hs.U, hs.H.Slug)
 				Expect(err).To(BeNil())
@@ -1110,7 +1130,7 @@ var _ = Describe("controllers/hosts", func() {
 
 				hosts.HostbuilderClient = hb
 
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 			})
 
 			It("responds with HTTP 500 Internal Server Error", func() {
@@ -1166,17 +1186,26 @@ var _ = Describe("controllers/hosts", func() {
 			})
 
 			It("calls stop on all containers", func() {
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 				Expect(res.Code).To(Equal(http.StatusOK))
 				Expect(mockClient.StopCalled).To(Equal(2))
 			})
 
 			It("returns error if stop failed", func() {
 				mockClient.StopError = errors.New("can't stop won't stop")
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 				Expect(mockClient.StopCalled).To(Equal(2))
 				_, errDesc := ErrorSlug(res.Body)
 				Expect(errDesc).To(Equal("unable to stop containers rails-box, python-box"))
+			})
+
+			It("ignores stop failures if ignore-containers param is true", func() {
+				mockClient.StopError = errors.New("can't stop won't stop")
+				params := &url.Values{}
+				params.Set("ignore-containers", "true")
+				doRequest(hs.H.Slug, params)
+				Expect(mockClient.StopCalled).To(Equal(2))
+				Expect(res.Code).To(Equal(http.StatusOK))
 			})
 
 			checkStoppedMsg := func(msg interface{}, slug string) {
@@ -1192,7 +1221,7 @@ var _ = Describe("controllers/hosts", func() {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
 
-				doRequest(hs.H.Slug)
+				doRequest(hs.H.Slug, nil)
 
 				msg := <-ch
 				checkStoppedMsg(msg, c1.Slug)

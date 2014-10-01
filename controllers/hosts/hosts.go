@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -208,7 +209,8 @@ func Stop(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Requ
 	if h.State != host.StateRunning {
 		return errHostStopInvalidState
 	}
-	if err := stopContainers(env, h); err != nil {
+	ignoreContainers, _ := strconv.ParseBool(r.FormValue("ignore-containers"))
+	if err := stopContainers(env, h); err != nil && !ignoreContainers {
 		return err
 	}
 	if err := transition(env.DB, h,
@@ -226,13 +228,13 @@ func Restart(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.R
 	if h.State != host.StateRunning {
 		return errHostRestartInvalidState
 	}
-	if err := stopContainers(env, h); err != nil {
+	ignoreContainers, _ := strconv.ParseBool(r.FormValue("ignore-containers"))
+	if err := stopContainers(env, h); err != nil && !ignoreContainers {
 		return err
 	}
-	err := transition(env.DB, h,
+	if err := transition(env.DB, h,
 		host.StateRestarting, host.StateRunning,
-		HostbuilderClient.Restart)
-	if err != nil {
+		HostbuilderClient.Restart); err != nil {
 		return err
 	}
 
