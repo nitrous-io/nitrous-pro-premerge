@@ -345,8 +345,8 @@ var _ = Describe("controllers/images", func() {
 	})
 
 	Describe("GET /api/v0/images", func() {
-		doRequest := func() *httptest.ResponseRecorder {
-			req, err := NewAuthedRequest(t, "GET", "/api/v0/images", nil)
+		doRequest := func(params *url.Values) *httptest.ResponseRecorder {
+			req, err := NewAuthedRequest(t, "GET", "/api/v0/images", params)
 			Expect(err).To(BeNil())
 			res := httptest.NewRecorder()
 			svr.Router().ServeHTTP(res, req)
@@ -413,7 +413,7 @@ var _ = Describe("controllers/images", func() {
 		})
 
 		It("responds with images from the database augmented with data from Freighter", func() {
-			res := doRequest()
+			res := doRequest(nil)
 
 			Expect(mockClient.ListImagesCalled).To(Equal(2))
 			Expect(res.Code).To(Equal(http.StatusOK))
@@ -447,6 +447,58 @@ var _ = Describe("controllers/images", func() {
 			Expect(images[1].BuiltAt).To(Equal(&builtAt))
 			Expect(images[1].CreatedAt).NotTo(BeNil())
 			Expect(images[1].UpdatedAt).NotTo(BeNil())
+		})
+
+		Context("when only hidden images are requested", func() {
+			BeforeEach(func() {
+				fOnlyImg := &freighterclient.Image{
+					ID:          "3a",
+					Name:        "source3",
+					Tag:         "sourcetag3",
+					CreatedAt:   time.Date(2014, time.August, 22, 0, 0, 0, 0, time.UTC).Unix(),
+					ActualSize:  9000,
+					VirtualSize: 9001,
+				}
+
+				mockClient.ListImagesArray = []*freighterclient.Image{img1, img2, fOnlyImg}
+			})
+
+			It("should list *only* the images not present in the DB", func() {
+				res := doRequest(&url.Values{"hidden": []string{"true"}})
+
+				Expect(mockClient.ListImagesCalled).To(Equal(2))
+				Expect(res.Code).To(Equal(http.StatusOK))
+
+				var j map[string][]serializers.Image
+				data := res.Body.Bytes()
+				err := json.Unmarshal(data, &j)
+				Expect(err).To(BeNil())
+				images, ok := j["images"]
+				Expect(ok).To(BeTrue())
+				Expect(images).To(HaveLen(2))
+
+				Expect(images[0].FreighterID).To(Equal("3a"))
+				Expect(images[0].Name).To(BeEmpty())
+				Expect(images[0].Slug).To(Equal("source3"))
+				Expect(images[0].Tag).To(Equal("sourcetag3"))
+				Expect(images[0].ActualSize).To(Equal(int64(9000)))
+				Expect(images[0].VirtualSize).To(Equal(int64(9001)))
+				builtAt := time.Date(2014, time.August, 22, 0, 0, 0, 0, time.UTC)
+				Expect(images[0].BuiltAt).To(Equal(&builtAt))
+				Expect(images[0].CreatedAt).To(BeNil())
+				Expect(images[0].UpdatedAt).To(BeNil())
+
+				Expect(images[1].FreighterID).To(Equal("3a"))
+				Expect(images[1].Name).To(BeEmpty())
+				Expect(images[1].Slug).To(Equal("source3"))
+				Expect(images[1].Tag).To(Equal("sourcetag3"))
+				Expect(images[1].ActualSize).To(Equal(int64(9000)))
+				Expect(images[1].VirtualSize).To(Equal(int64(9001)))
+				builtAt = time.Date(2014, time.August, 22, 0, 0, 0, 0, time.UTC)
+				Expect(images[1].BuiltAt).To(Equal(&builtAt))
+				Expect(images[1].CreatedAt).To(BeNil())
+				Expect(images[1].UpdatedAt).To(BeNil())
+			})
 		})
 
 		Context("oauth token failure modes", func() {
