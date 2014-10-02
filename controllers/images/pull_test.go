@@ -128,8 +128,9 @@ var _ = Describe("controllers/images/pull", func() {
 		case <-time.After(50 * time.Millisecond):
 			Fail("timeout while getting image removed event")
 		case e := <-ech:
-			i := e.Data.(*serializers.Image)
-			Expect(i.Repo).To(Equal("scratch:latest"), "failed to serialize image response")
+			evtData, ok := e.Data.(map[string]*serializers.Image)
+			Expect(ok).To(BeTrue())
+			Expect(evtData["image"].Repo).To(Equal("scratch:latest"), "failed to serialize image response")
 		}
 	})
 
@@ -219,7 +220,9 @@ var _ = Describe("controllers/images/pull", func() {
 				Fail("expected EventImagePulled but timed out")
 			}
 		}
-		img := e.Data.(*serializers.Image)
+		evtData, ok := e.Data.(map[string]*serializers.Image)
+		Expect(ok).To(BeTrue())
+		img := evtData["image"]
 		Expect(img.ID).To(Equal(i.ID), "failed to serialize correct image")
 		Expect(img.FreighterID).To(Equal("123asd"), "failed to serialize freighter response")
 	})
@@ -256,8 +259,9 @@ var _ = Describe("controllers/images/pull", func() {
 		case <-time.After(50 * time.Millisecond):
 			Expect(true).To(BeFalse(), "timeout while getting image pull failed event")
 		case e := <-ech:
-			img := e.Data.(*serializers.Image)
-			Expect(img.Slug).To(Equal("scratch"), "failed to serialize freighter response")
+			evtData, ok := e.Data.(map[string]*serializers.Image)
+			Expect(ok).To(BeTrue())
+			Expect(evtData["image"].Slug).To(Equal("scratch"), "failed to serialize freighter response")
 		}
 	})
 

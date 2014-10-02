@@ -748,11 +748,11 @@ var _ = Describe("controllers/containers", func() {
 				}
 			}
 			Expect(evt.Name).To(Equal(controllers.EventContainerCreated))
-			cn, ok := evt.Data.(*serializers.Container)
+			evtData, ok := evt.Data.(map[string]*serializers.Container)
 			Expect(ok).To(BeTrue())
 			c, err := container.Find(db, u, "elixir-web-1")
 			Expect(err).To(BeNil())
-			expectSerializedContainer(cn, c)
+			expectSerializedContainer(evtData["container"], c)
 
 			close(done)
 		})
@@ -1085,7 +1085,9 @@ var _ = Describe("controllers/containers", func() {
 			Expect(ok).To(BeTrue())
 			Expect(evt.Name).To(Equal(controllers.EventImageCreated))
 
-			img, ok := evt.Data.(*serializers.Image)
+			evtData, ok := evt.Data.(map[string]*serializers.Image)
+			Expect(ok).To(BeTrue())
+			img, ok := evtData["image"]
 			Expect(ok).To(BeTrue())
 			Expect(img).NotTo(BeNil())
 			Expect(img.Slug).To(Equal("elixir-staging"))
@@ -1395,9 +1397,9 @@ var _ = Describe("controllers/containers", func() {
 			Expect(ok).To(BeTrue())
 			Expect(evt.Name).To(Equal(inputs.expectedEventName))
 
-			cn, ok := evt.Data.(*serializers.Container)
+			cn, ok := evt.Data.(map[string]*serializers.Container)
 			Expect(ok).To(BeTrue())
-			expectSerializedContainer(cn)
+			expectSerializedContainer(cn["container"])
 
 			close(done)
 		})
@@ -1647,9 +1649,9 @@ var _ = Describe("controllers/containers", func() {
 			Expect(ok).To(BeTrue())
 			Expect(evt.Name).To(Equal(controllers.EventContainerDestroyed))
 
-			cn, ok := evt.Data.(*serializers.Container)
+			evtData, ok := evt.Data.(map[string]*serializers.Container)
 			Expect(ok).To(BeTrue())
-			expectSerializedContainer(cn)
+			expectSerializedContainer(evtData["container"])
 
 			close(done)
 		})

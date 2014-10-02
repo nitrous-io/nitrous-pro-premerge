@@ -111,7 +111,9 @@ func login(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Req
 	}
 
 	env.Events.Publish(
-		controllers.NewEvent(controllers.EventRegistryAdded, serializers.SerializeRegistry(reg)),
+		controllers.NewEvent(controllers.EventRegistryAdded, map[string]*serializers.Registry{
+			"registry": serializers.SerializeRegistry(reg),
+		}),
 		env.User.Topic(),
 	)
 	env.Status = http.StatusOK
@@ -158,7 +160,9 @@ func logout(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Re
 	}
 
 	env.Events.Publish(
-		controllers.NewEvent(controllers.EventRegistryRemoved, serializers.SerializeRegistry(reg)),
+		controllers.NewEvent(controllers.EventRegistryRemoved, map[string]*serializers.Registry{
+			"registry": serializers.SerializeRegistry(reg),
+		}),
 		env.User.Topic(),
 	)
 	env.Status = http.StatusOK

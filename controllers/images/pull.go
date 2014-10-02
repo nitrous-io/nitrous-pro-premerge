@@ -34,7 +34,9 @@ func (c *pullContext) run(async, isNew bool) (*image.Image, error) {
 		if err := cl.PullImage(repo, update, c.writer); err != nil {
 			// publish image pull failed event with the current image data
 			env.Events.Publish(
-				controllers.NewEvent(controllers.EventImagePullFailed, serializers.SerializeImage(img)),
+				controllers.NewEvent(controllers.EventImagePullFailed, map[string]*serializers.Image{
+					"image": serializers.SerializeImage(img),
+				}),
 				env.User.Topic(),
 			)
 			// if we failed to pull the image, and the image is new i.e. does not
@@ -47,7 +49,9 @@ func (c *pullContext) run(async, isNew bool) (*image.Image, error) {
 					return
 				}
 				env.Events.Publish(
-					controllers.NewEvent(controllers.EventImageRemoved, serializers.SerializeImage(img)),
+					controllers.NewEvent(controllers.EventImageRemoved, map[string]*serializers.Image{
+						"image": serializers.SerializeImage(img),
+					}),
 					env.User.Topic(),
 				)
 			}
@@ -73,7 +77,9 @@ func (c *pullContext) run(async, isNew bool) (*image.Image, error) {
 		}
 
 		env.Events.Publish(
-			controllers.NewEvent(controllers.EventImagePulled, serializers.SerializeImage(img)),
+			controllers.NewEvent(controllers.EventImagePulled, map[string]*serializers.Image{
+				"image": serializers.SerializeImage(img),
+			}),
 			env.User.Topic(),
 		)
 		ch <- &buildResult{Image: img}

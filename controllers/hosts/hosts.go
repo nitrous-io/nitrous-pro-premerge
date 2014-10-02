@@ -274,7 +274,9 @@ func serializeHost(env *middleware.Env, h *host.Host) {
 
 func publishHostEvent(env *middleware.Env, name controllers.EventName, h *host.Host) {
 	env.Events.Publish(
-		controllers.NewEvent(name, serializers.SerializeHost(h)),
+		controllers.NewEvent(name, map[string]*serializers.Host{
+			"host": serializers.SerializeHost(h),
+		}),
 		env.User.Topic(),
 	)
 }
@@ -316,7 +318,9 @@ func stopContainer(env *middleware.Env, cl freighterclient.Client, cn *container
 	}
 
 	env.Events.Publish(
-		controllers.NewEvent(controllers.EventContainerStopped, serializers.SerializeContainer(cn)),
+		controllers.NewEvent(controllers.EventContainerStopped, map[string]*serializers.Container{
+			"container": serializers.SerializeContainer(cn),
+		}),
 		env.User.Topic(),
 	)
 	return nil
