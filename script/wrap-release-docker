@@ -4,16 +4,9 @@ VERSION=${2:?"version is required"}
 
 docker run \
   --rm=true \
-  -v $APT_GPG_PASSPHRASE:/apt.nitrous.io/.gpg/nitrous.passphrase.gpg \
-  -v $APT_GPG_PUBLIC:/apt.nitrous.io/.gpg/nitrous.pub.gpg \
-  -v $APT_GPG_SECRET:/apt.nitrous.io/.gpg/nitrous.sec.gpg \
   -v /tmp/$APP/$VERSION:/tmp/$APP/$VERSION \
   -v $(pwd):/root/app \
   -w /root/app \
   -e ACCESS_KEY=$ACCESS_KEY \
   -e SECRET_KEY=$SECRET_KEY \
-  -e BUILD_NUMBER=$BUILD_NUMBER \
-  -e APT_GPG_PUBLIC=/apt.nitrous.io/.gpg/nitrous.pub.gpg \
-  -e APT_GPG_SECRET=/apt.nitrous.io/.gpg/nitrous.sec.gpg \
-  -e APT_GPG_PASSPHRASE=/apt.nitrous.io/.gpg/nitrous.passphrase.gpg \
   nitrousio/packager ./script/release $APP $VERSION
