@@ -10,7 +10,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"
-	"github.com/mattn/go-shellwords"
 
 	"github.com/nitrous-io/freighter/freighterclient"
 	"github.com/nitrous-io/nitrous-common/hmactoken"
@@ -23,6 +22,7 @@ import (
 	"github.com/nitrous-io/nitrous/models/image"
 	"github.com/nitrous-io/nitrous/models/volume"
 	"github.com/nitrous-io/nitrous/pkg/httperror"
+	"github.com/nitrous-io/nitrous/pkg/shellwords"
 	"github.com/nitrous-io/nitrous/serializers"
 )
 
