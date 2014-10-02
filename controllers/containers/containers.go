@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"
+	"github.com/mattn/go-shellwords"
 
 	"github.com/nitrous-io/freighter/freighterclient"
 	"github.com/nitrous-io/nitrous-common/hmactoken"
@@ -35,6 +36,7 @@ var (
 	errContainerNotFound = httperror.New(http.StatusNotFound, "not_found", "container does not exist")
 	errImageNotFound     = httperror.New(http.StatusNotFound, "not_found", "image does not exist")
 	errInvalidPortspec   = httperror.New(http.StatusBadRequest, "invalid_request", "port spec invalid")
+	errInvalidCommand    = httperror.New(http.StatusBadRequest, "invalid_request", "container cmd invalid")
 	errContainerLocked   = httperror.New(http.StatusConflict, "container_locked", "container is locked")
 )
 
@@ -635,6 +637,13 @@ func prepareConfig(form url.Values, hv map[string]*volume.Volume) (*freightercli
 	}
 	c.Mounts = vols
 	c.PortBindings = readParam(form, "port[]")
+	if cmd := form.Get("cmd"); cmd != "" {
+		args, err := shellwords.Parse(cmd)
+		if err != nil {
+			return nil, errInvalidCommand
+		}
+		c.Cmd = args
+	}
 	c.PublishAll, _ = strconv.ParseBool(form.Get("publish_all"))
 	return c, nil
 }
