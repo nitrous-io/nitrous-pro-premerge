@@ -331,7 +331,9 @@ var _ = Describe("controllers/registries", func() {
 
 							Expect(<-ch).To(Equal(&controllers.Event{
 								Name: controllers.EventRegistryAdded,
-								Data: serializers.SerializeRegistry(r),
+								Data: map[string]*serializers.Registry{
+									"registry": serializers.SerializeRegistry(r),
+								},
 							}))
 							close(done)
 						})
@@ -488,7 +490,9 @@ var _ = Describe("controllers/registries", func() {
 
 					Expect(<-ch).To(Equal(&controllers.Event{
 						Name: controllers.EventRegistryRemoved,
-						Data: serializers.SerializeRegistry(r),
+						Data: map[string]*serializers.Registry{
+							"registry": serializers.SerializeRegistry(r),
+						},
 					}))
 					close(done)
 				})

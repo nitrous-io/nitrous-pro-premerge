@@ -151,7 +151,9 @@ func Remove(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Re
 	}
 
 	env.Events.Publish(
-		controllers.NewEvent(controllers.EventImageRemoved, serializers.SerializeImage(img)),
+		controllers.NewEvent(controllers.EventImageRemoved, map[string]*serializers.Image{
+			"image": serializers.SerializeImage(img),
+		}),
 		env.User.Topic(),
 	)
 	env.Status = http.StatusOK
@@ -261,9 +263,9 @@ func Tag(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Reque
 	}
 
 	env.Events.Publish(
-		controllers.NewEvent(controllers.EventImageTagged, serializers.SerializeImage(taggedImg)),
-		env.User.Topic(),
-	)
+		controllers.NewEvent(controllers.EventImageTagged, map[string]*serializers.Image{
+			"image": serializers.SerializeImage(taggedImg),
+		}), env.User.Topic())
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
 		"image": serializers.SerializeImage(taggedImg),

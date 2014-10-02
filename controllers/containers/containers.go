@@ -326,7 +326,9 @@ func commit(cn *container.Container, h *host.Host, env *middleware.Env, w http.R
 	}
 	cn = hydrateContainer(cn, liveContainer, h)
 
-	env.Events.Publish(controllers.NewEvent(controllers.EventImageCreated, sImg), env.User.Topic())
+	env.Events.Publish(controllers.NewEvent(controllers.EventImageCreated, map[string]*serializers.Image{
+		"image": sImg,
+	}), env.User.Topic())
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
 		"image":     sImg,
@@ -619,7 +621,9 @@ func mkContainer(fc *freighterclient.Container, h *host.Host) *container.Contain
 
 func publishContainerEvent(env *middleware.Env, name controllers.EventName, c *container.Container) {
 	env.Events.Publish(
-		controllers.NewEvent(name, serializers.SerializeContainer(c)),
+		controllers.NewEvent(name, map[string]*serializers.Container{
+			"container": serializers.SerializeContainer(c),
+		}),
 		env.User.Topic(),
 	)
 }

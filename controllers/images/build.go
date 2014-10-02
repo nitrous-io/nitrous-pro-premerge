@@ -47,7 +47,9 @@ func (c *buildContext) build(async bool, isNew bool) (*image.Image, error) {
 	go func() {
 		if err := cl.BuildImage(slug, c.in, c.out, c.remote); err != nil {
 			env.Events.Publish(
-				controllers.NewEvent(controllers.EventImageBuildFailed, serializers.SerializeImage(img)),
+				controllers.NewEvent(controllers.EventImageBuildFailed, map[string]*serializers.Image{
+					"image": serializers.SerializeImage(img),
+				}),
 				env.User.Topic(),
 			)
 
@@ -74,7 +76,9 @@ func (c *buildContext) build(async bool, isNew bool) (*image.Image, error) {
 		}
 
 		env.Events.Publish(
-			controllers.NewEvent(controllers.EventImageBuilt, serializers.SerializeImage(img)),
+			controllers.NewEvent(controllers.EventImageBuilt, map[string]*serializers.Image{
+				"image": serializers.SerializeImage(img),
+			}),
 			env.User.Topic(),
 		)
 

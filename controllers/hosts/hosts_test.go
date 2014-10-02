@@ -359,7 +359,9 @@ var _ = Describe("controllers/hosts", func() {
 			Expect(err).To(BeNil())
 			Expect(<-ch).To(Equal(&controllers.Event{
 				Name: controllers.EventHostUpdated,
-				Data: serializers.SerializeHost(updated),
+				Data: map[string]*serializers.Host{
+					"host": serializers.SerializeHost(updated),
+				},
 			}))
 			close(done)
 		}, 3) // add longer timeout to allow goroutine to finish
@@ -601,7 +603,9 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(err).To(BeNil())
 				Expect(<-ch).To(Equal(&controllers.Event{
 					Name: controllers.EventHostDestroyed,
-					Data: serializers.SerializeHost(deleted),
+					Data: map[string]*serializers.Host{
+						"host": serializers.SerializeHost(deleted),
+					},
 				}))
 				close(done)
 			}, 3) // add longer timeout to allow goroutine to finish
@@ -752,7 +756,9 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(err).To(BeNil())
 				Expect(<-ch).To(Equal(&controllers.Event{
 					Name: controllers.EventHostStarted,
-					Data: serializers.SerializeHost(h),
+					Data: map[string]*serializers.Host{
+						"host": serializers.SerializeHost(h),
+					},
 				}))
 				close(done)
 			}, 3) // add longer timeout to allow goroutine to finish
@@ -884,7 +890,9 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(err).To(BeNil())
 				Expect(<-ch).To(Equal(&controllers.Event{
 					Name: controllers.EventHostStopped,
-					Data: serializers.SerializeHost(h),
+					Data: map[string]*serializers.Host{
+						"host": serializers.SerializeHost(h),
+					},
 				}))
 				close(done)
 			}, 3) // add longer timeout to allow goroutine to finish
@@ -973,9 +981,9 @@ var _ = Describe("controllers/hosts", func() {
 				evt, ok := msg.(*controllers.Event)
 				Expect(ok).To(BeTrue())
 				Expect(evt.Name).To(Equal(controllers.EventContainerStopped))
-				cn, ok := evt.Data.(*serializers.Container)
+				evtData, ok := evt.Data.(map[string]*serializers.Container)
 				Expect(ok).To(BeTrue())
-				Expect(cn.Slug).To(Equal(slug))
+				Expect(evtData["container"].Slug).To(Equal(slug))
 			}
 
 			It("publishes container stopped events", func(done Done) {
@@ -1094,7 +1102,9 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(err).To(BeNil())
 				Expect(<-ch).To(Equal(&controllers.Event{
 					Name: controllers.EventHostRestarted,
-					Data: serializers.SerializeHost(h),
+					Data: map[string]*serializers.Host{
+						"host": serializers.SerializeHost(h),
+					},
 				}))
 				close(done)
 			}, 3) // increase timeout to allow goroutine to finish
@@ -1183,9 +1193,9 @@ var _ = Describe("controllers/hosts", func() {
 				evt, ok := msg.(*controllers.Event)
 				Expect(ok).To(BeTrue())
 				Expect(evt.Name).To(Equal(controllers.EventContainerStopped))
-				cn, ok := evt.Data.(*serializers.Container)
+				evtData, ok := evt.Data.(map[string]*serializers.Container)
 				Expect(ok).To(BeTrue())
-				Expect(cn.Slug).To(Equal(slug))
+				Expect(evtData["container"].Slug).To(Equal(slug))
 			}
 
 			It("publishes container stopped events", func(done Done) {

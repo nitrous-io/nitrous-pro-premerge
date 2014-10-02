@@ -194,7 +194,9 @@ func getVolume(db ndb.QueryReceiver, hostID int64, slug string) (*volume.Volume,
 
 func publishVolumeEvent(env *middleware.Env, name controllers.EventName, v *volume.Volume) {
 	env.Events.Publish(
-		controllers.NewEvent(name, serializers.SerializeVolume(v)),
+		controllers.NewEvent(name, map[string]*serializers.Volume{
+			"volume": serializers.SerializeVolume(v),
+		}),
 		env.User.Topic(),
 	)
 }

@@ -203,7 +203,9 @@ var _ = Describe("controllers/volumes", func() {
 				Expect(err).To(BeNil())
 				Expect(<-ch).To(Equal(&controllers.Event{
 					Name: controllers.EventVolumeCreated,
-					Data: serializers.SerializeVolume(v),
+					Data: map[string]*serializers.Volume{
+						"volume": serializers.SerializeVolume(v),
+					},
 				}))
 				close(done)
 			})
@@ -317,9 +319,9 @@ var _ = Describe("controllers/volumes", func() {
 				Expect(ok).To(BeTrue())
 				Expect(evt.Name).To(Equal(controllers.EventVolumeDestroyed))
 
-				vol, ok := evt.Data.(*serializers.Volume)
+				evtData, ok := evt.Data.(map[string]*serializers.Volume)
 				Expect(ok).To(BeTrue())
-				Expect(vol.Slug).To(Equal("deprecated"))
+				Expect(evtData["volume"].Slug).To(Equal("deprecated"))
 				close(done)
 			})
 		})

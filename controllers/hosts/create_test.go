@@ -343,7 +343,9 @@ var _ = Describe("POST /api/v0/hosts", func() {
 
 				Expect(msgs[3]).To(Equal(&controllers.Event{
 					Name: controllers.EventHostCreated,
-					Data: serializers.SerializeHost(&h),
+					Data: map[string]*serializers.Host{
+						"host": serializers.SerializeHost(&h),
+					},
 				}), "unexpected event, wanted EventHostCreated")
 			}
 		})
@@ -525,7 +527,9 @@ var _ = Describe("POST /api/v0/hosts", func() {
 
 					Expect(msgs[1]).To(Equal(&controllers.Event{
 						Name: controllers.EventHostCreated,
-						Data: serializers.SerializeHost(h),
+						Data: map[string]*serializers.Host{
+							"host": serializers.SerializeHost(h),
+						},
 					}), "unexpected event, wanted EventHostCreated")
 				}
 			})
@@ -577,7 +581,9 @@ var _ = Describe("POST /api/v0/hosts", func() {
 
 					Expect(msgs[1]).To(Equal(&controllers.Event{
 						Name: controllers.EventHostCreateFailed,
-						Data: serializers.SerializeHost(h),
+						Data: map[string]*serializers.Host{
+							"host": serializers.SerializeHost(h),
+						},
 					}), "unexpected event, wanted EventHostCreated")
 				case <-time.After(100 * time.Millisecond):
 					Fail("timeout while waiting for EventHostCreateFailed")

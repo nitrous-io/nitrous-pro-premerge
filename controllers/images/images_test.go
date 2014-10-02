@@ -521,8 +521,9 @@ var _ = Describe("controllers/images", func() {
 				}
 			}
 			Expect(evt.Name).To(Equal(controllers.EventImageBuildFailed))
-			img := evt.Data.(*serializers.Image)
-			Expect(img.Slug).To(Equal("scratcher"))
+			evtData, ok := evt.Data.(map[string]*serializers.Image)
+			Expect(ok).To(BeTrue())
+			Expect(evtData["image"].Slug).To(Equal("scratcher"))
 			close(done)
 		})
 
@@ -667,7 +668,9 @@ var _ = Describe("controllers/images", func() {
 					}
 					Expect(evt).To(Equal(&controllers.Event{
 						Name: controllers.EventImageBuilt,
-						Data: serializers.SerializeImage(i),
+						Data: map[string]*serializers.Image{
+							"image": serializers.SerializeImage(i),
+						},
 					}))
 					close(done)
 				})
@@ -901,7 +904,9 @@ var _ = Describe("controllers/images", func() {
 
 			Expect(<-ch).To(Equal(&controllers.Event{
 				Name: controllers.EventImageRemoved,
-				Data: serializers.SerializeImage(i),
+				Data: map[string]*serializers.Image{
+					"image": serializers.SerializeImage(i),
+				},
 			}))
 			close(done)
 		})
@@ -1124,8 +1129,9 @@ var _ = Describe("controllers/images", func() {
 			evt, ok := msg.(*controllers.Event)
 			Expect(ok).To(BeTrue())
 			Expect(evt.Name).To(Equal(controllers.EventImageTagged))
-			img, ok := evt.Data.(*serializers.Image)
+			evtData, ok := evt.Data.(map[string]*serializers.Image)
 			Expect(ok).To(BeTrue())
+			img := evtData["image"]
 			Expect(img.FreighterID).To(Equal("cafebabe"))
 			Expect(img.Slug).To(Equal("staging"))
 			Expect(img.Tag).To(Equal("latest"))
