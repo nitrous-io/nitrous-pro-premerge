@@ -73,17 +73,30 @@ func Index(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	for _, img := range dbImgs {
-		fImg := findMatchingFreighterImage(img, fImgs)
-		if fImg == nil { // log and continue
-			env.Logger.Errorf("images.index: image '%+v' exists in database but not in Freighter: %v", img, err)
-			continue
+	onlyHidden, _ := strconv.ParseBool(r.FormValue("hidden"))
+
+	if onlyHidden {
+		hiddenImages := []*image.Image{}
+		for _, img := range fImgs {
+			dbImg := findMatchingDbImg(img, dbImgs)
+			if dbImg == nil {
+				hiddenImages = append(hiddenImages, convertImage(img))
+			}
 		}
-		img.ActualSize = fImg.ActualSize
-		img.VirtualSize = fImg.VirtualSize
-		if fImg.CreatedAt != 0 {
-			t := time.Unix(fImg.CreatedAt, 0).UTC()
-			img.BuiltAt = &t
+		dbImgs = hiddenImages
+	} else {
+		for _, img := range dbImgs {
+			fImg := findMatchingFreighterImage(img, fImgs)
+			if fImg == nil { // log and continue
+				env.Logger.Errorf("images.index: image '%+v' exists in database but not in Freighter: %v", img, err)
+				continue
+			}
+			img.ActualSize = fImg.ActualSize
+			img.VirtualSize = fImg.VirtualSize
+			if fImg.CreatedAt != 0 {
+				t := time.Unix(fImg.CreatedAt, 0).UTC()
+				img.BuiltAt = &t
+			}
 		}
 	}
 
@@ -115,8 +128,17 @@ func findImagesInHosts(db db.QueryReceiver, hosts []host.Host) ([]*freighterclie
 
 func findMatchingFreighterImage(i *image.Image, images []*freighterclient.Image) *freighterclient.Image {
 	for _, fImg := range images {
-		if fImg.ID == i.FreighterID && fImg.Name == i.Slug && i.Tag == i.Tag {
+		if fImg.ID == i.FreighterID && fImg.Name == i.Slug && fImg.Tag == i.Tag {
 			return fImg
+		}
+	}
+	return nil
+}
+
+func findMatchingDbImg(i *freighterclient.Image, images []*image.Image) *image.Image {
+	for _, dbImg := range images {
+		if dbImg.FreighterID == i.ID && dbImg.Slug == i.Name && dbImg.Tag == i.Tag {
+			return dbImg
 		}
 	}
 	return nil
