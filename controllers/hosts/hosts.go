@@ -2,13 +2,10 @@ package hosts
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 	"os"
-	"strings"
+	"strconv"
 	"time"
-
-	"github.com/nitrous-io/freighter/freighterclient"
 
 	"github.com/nitrous-io/nitrous/controllers"
 	ndb "github.com/nitrous-io/nitrous/db"
@@ -207,12 +204,13 @@ func Start(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Req
 }
 
 func Stop(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
-	if h.State != host.StateRunning {
+	force, _ := strconv.ParseBool(r.FormValue("force"))
+	if !force && h.State != host.StateRunning {
 		return errHostStopInvalidState
 	}
-	if err := stopContainers(env, h); err != nil {
-		return err
-	}
+
+	publishContainersStopped(env, h)
+
 	if err := transition(env.DB, h,
 		host.StateStopping, host.StateStopped,
 		HostbuilderClient.Stop); err != nil {
@@ -225,16 +223,16 @@ func Stop(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Requ
 }
 
 func Restart(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
-	if h.State != host.StateRunning {
+	force, _ := strconv.ParseBool(r.FormValue("force"))
+	if !force && h.State != host.StateRunning {
 		return errHostRestartInvalidState
 	}
-	if err := stopContainers(env, h); err != nil {
-		return err
-	}
-	err := transition(env.DB, h,
+
+	publishContainersStopped(env, h)
+
+	if err := transition(env.DB, h,
 		host.StateRestarting, host.StateRunning,
-		HostbuilderClient.Restart)
-	if err != nil {
+		HostbuilderClient.Restart); err != nil {
 		return err
 	}
 
@@ -281,47 +279,19 @@ func publishHostEvent(env *middleware.Env, name controllers.EventName, h *host.H
 	)
 }
 
-func stopContainers(env *middleware.Env, h *host.Host) error {
-	cl, err := controllers.NewFreighterClient(env.DB, h)
-	if err != nil {
-		return err
-	}
+func publishContainersStopped(env *middleware.Env, h *host.Host) {
 	cns, err := container.FindAllByHostID(env.DB, h.ID)
 	if err != nil {
-		return err
+		env.Logger.Errorf("hosts.Stop: Unable to list host containers: %v", err)
+		return
 	}
-	unstopped := []string{}
 	for _, cn := range cns {
-		if err := stopContainer(env, cl, cn); err != nil {
-			env.Logger.Errorf("hosts.Stop: Unable to stop container %s", cn.Slug)
-			unstopped = append(unstopped, cn.Slug)
-		}
+		cn.State = container.StateStopped
+		env.Events.Publish(
+			controllers.NewEvent(controllers.EventContainerStopped, map[string]*serializers.Container{
+				"container": serializers.SerializeContainer(cn),
+			}),
+			env.User.Topic(),
+		)
 	}
-	if len(unstopped) == 0 {
-		return nil
-	}
-	return httperror.New(http.StatusBadRequest, "invalid_request", fmt.Sprintf("unable to stop containers %s", strings.Join(unstopped, ", ")))
-}
-
-func stopContainer(env *middleware.Env, cl freighterclient.Client, cn *container.Container) error {
-	db := env.DB
-	err := cn.Lock(1*time.Minute, db)
-	if err != nil {
-		return err
-	}
-	defer cn.Unlock(db)
-
-	// it is ok to call stop on stopped container, so we don't need an extra
-	// call to freighter to check state
-	if _, err := cl.Stop(cn.CID); err != nil {
-		return err
-	}
-
-	env.Events.Publish(
-		controllers.NewEvent(controllers.EventContainerStopped, map[string]*serializers.Container{
-			"container": serializers.SerializeContainer(cn),
-		}),
-		env.User.Topic(),
-	)
-	return nil
 }
