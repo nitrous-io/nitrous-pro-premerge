@@ -60,10 +60,10 @@
           span.empty &ndash;
 
     tr
-      th IP Address
+      th Hostname
       td colspan='3'
         span.click-highlight
-          = ipAddress
+          = hostname
 
     tr
       th Created At
