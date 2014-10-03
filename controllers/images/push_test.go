@@ -1,7 +1,6 @@
 package images_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +14,7 @@ import (
 	"github.com/nitrous-io/nitrous/controllers"
 	"github.com/nitrous-io/nitrous/db"
 	"github.com/nitrous-io/nitrous/models/image"
+	"github.com/nitrous-io/nitrous/serializers"
 	"github.com/nitrous-io/nitrous/server"
 	. "github.com/nitrous-io/nitrous/test"
 	. "github.com/onsi/ginkgo"
@@ -122,8 +122,6 @@ var _ = Describe("controllers/images", func() {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
 				ctx.insertImage(fs, db)
-				i, err := image.Find(db, u, h, "scratch:latest")
-				Expect(err).To(BeNil(), "failed to find image after push")
 
 				ctx.doPush(svr, "foo", "scratch:latest", &url.Values{"repository": []string{"nitrousio/devenv"}})
 
@@ -132,16 +130,19 @@ var _ = Describe("controllers/images", func() {
 				case ev := <-ch:
 					// check if the first event we got is image pushing event
 					e := ev.(*controllers.Event)
-					Expect(e.Name).To(Equal(controllers.EventImagePushing), "expected image pulling event")
+					Expect(e.Name).To(Equal(controllers.EventImagePushing))
+
+					i, err := image.Find(db, u, h, "scratch:latest")
+					Expect(err).To(BeNil())
 					data := e.Data.(*controllers.ProgressEvent)
-					Expect(data.ID).To(Equal(i.ID), "emitted image pulling with invalid image")
+					Expect(data.ID).To(Equal(i.ID), "emitted image pushing with invalid image")
 					Expect(data.Progress).To(Equal(`{"status":"Pushing..."}`), "failed to include progress data")
 				case <-timeout:
 					Fail("expected EventImagePushing but timed out")
 				}
 			})
 
-			It("publishes an image pushed event with information", func() {
+			It("publishes an image pushed event with the image and the target repository", func() {
 				fs := newFreighterServer("scratch", "latest")
 				ctx := newImgTestCtx(fs, db)
 				fs.start(db, ctx)
@@ -151,10 +152,9 @@ var _ = Describe("controllers/images", func() {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
 				ctx.insertImage(fs, db)
-				_, err := image.Find(db, u, h, "scratch:latest")
-				Expect(err).To(BeNil(), "failed to find image after push")
 
-				ctx.doPush(svr, "foo", "scratch:latest", &url.Values{"repository": []string{"nitrousio/devenv"}})
+				res := ctx.doPush(svr, "foo", "scratch:latest", &url.Values{"repository": []string{"nitrousio/devenv"}})
+				Expect(res.Code).To(Equal(http.StatusOK))
 
 				var e *controllers.Event
 				timeout := time.After(1000 * time.Millisecond)
@@ -169,16 +169,17 @@ var _ = Describe("controllers/images", func() {
 						Fail("expected EventImagePushed but timed out")
 					}
 				}
-				Expect(e.Data).To(BeEquivalentTo(struct {
-					Image      string `json:"image"`
-					Repository string `json:"repository"`
-				}{
-					Image:      "scratch:latest",
-					Repository: "nitrousio/devenv",
-				}))
+				evtData, ok := e.Data.(map[string]interface{})
+				Expect(ok).To(BeTrue())
+				img, ok := evtData["image"].(*serializers.Image)
+				Expect(ok).To(BeTrue())
+				i, err := image.Find(db, u, h, "scratch:latest")
+				Expect(err).To(BeNil())
+				Expect(img).To(Equal(serializers.SerializeImage(i)))
+				Expect(evtData["repository"]).To(Equal("nitrousio/devenv"))
 			})
 
-			It("publishes an image pushed failed event with information", func() {
+			It("publishes an image pushed failed event with the image, target repository and the error", func() {
 				fs := newFreighterServer("scratch", "latest")
 				fs.pushError = true
 				ctx := newImgTestCtx(fs, db)
@@ -189,8 +190,6 @@ var _ = Describe("controllers/images", func() {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
 				ctx.insertImage(fs, db)
-				_, err := image.Find(db, u, h, "scratch:latest")
-				Expect(err).To(BeNil(), "failed to find image after push")
 
 				res := ctx.doPush(svr, "foo", "scratch:latest", &url.Values{"repository": []string{"nitrousio/devenv"}})
 				errType, _ := ErrorSlug(res.Body)
@@ -209,42 +208,32 @@ var _ = Describe("controllers/images", func() {
 						Fail("expected EventImagePushFailed but timed out")
 					}
 				}
-
-				Expect(e.Data).To(BeEquivalentTo(struct {
-					Image      string `json:"image"`
-					Repository string `json:"repository"`
-				}{
-					Image:      "scratch:latest",
-					Repository: "nitrousio/devenv",
-				}))
+				evtData, ok := e.Data.(map[string]interface{})
+				Expect(ok).To(BeTrue())
+				img, ok := evtData["image"].(*serializers.Image)
+				Expect(ok).To(BeTrue())
+				i, err := image.Find(db, u, h, "scratch:latest")
+				Expect(err).To(BeNil())
+				Expect(img).To(Equal(serializers.SerializeImage(i)))
+				Expect(evtData["repository"]).To(Equal("nitrousio/devenv"))
+				Expect(evtData["error"]).NotTo(BeEmpty())
 			})
 
 		})
 
-		It("returns a 202 Accepted with initial status OK when the async param is sent", func() {
+		It("returns a 202 Accepted when the async param is sent", func() {
 			fs := newFreighterServer("scratch", "latest")
 			ctx := newImgTestCtx(fs, db)
 			fs.start(db, ctx)
 			defer fs.Close()
 
-			u, h := ctx.user, ctx.host
 			ctx.insertImage(fs, db)
-			_, err := image.Find(db, u, h, "scratch:latest")
-			Expect(err).To(BeNil(), "failed to find image after push")
 
 			params := &url.Values{}
 			params.Set("async", "true")
 			params.Set("repository", "nitrousio/devenv")
 			res := ctx.doPush(svr, "foo", "scratch:latest", params)
 			Expect(res.Code).To(Equal(http.StatusAccepted))
-
-			j := struct {
-				Status string `json:"status"`
-			}{}
-			err = json.NewDecoder(res.Body).Decode(&j)
-			Expect(err).To(BeNil())
-
-			Expect(j.Status).To(Equal("ok"))
 		})
 	})
 })

@@ -1,7 +1,6 @@
 package images
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -14,6 +13,7 @@ import (
 	"github.com/nitrous-io/nitrous/middleware"
 	"github.com/nitrous-io/nitrous/models/host"
 	"github.com/nitrous-io/nitrous/models/image"
+	"github.com/nitrous-io/nitrous/serializers"
 )
 
 type pushContext struct {
@@ -28,49 +28,37 @@ func (c *pushContext) run(async bool) error {
 	ch := make(chan error, 1)
 	env, cl, img, repo := c.env, c.client, c.img, c.repo
 
-	type data struct {
-		Image      string `json:"image"`
-		Repository string `json:"repository"`
-	}
-
 	go func() {
 		if err := cl.PushImage(img.FullRepository(), repo, c.writer); err != nil {
-			var finalErr error
-			if err == freighterclient.ErrImagePushAuthRequired {
-				finalErr = err
-			} else {
-				finalErr = fmt.Errorf("failed to push image %s", err)
-			}
-
 			env.Events.Publish(
-				controllers.NewEvent(controllers.EventImagePushFailed, data{Image: img.FullRepository(), Repository: repo}),
+				controllers.NewEvent(controllers.EventImagePushFailed, map[string]interface{}{
+					"image":      serializers.SerializeImage(img),
+					"repository": repo,
+					"error":      err.Error(),
+				}),
 				env.User.Topic(),
 			)
 
-			ch <- finalErr
-
+			ch <- err
 			return
 		}
 
-		env.Data = map[string]interface{}{
-			"status": "ok",
-		}
 		env.Events.Publish(
-			controllers.NewEvent(controllers.EventImagePushed, data{Image: img.FullRepository(), Repository: repo}),
+			controllers.NewEvent(controllers.EventImagePushed, map[string]interface{}{
+				"image":      serializers.SerializeImage(img),
+				"repository": repo,
+			}),
 			env.User.Topic(),
 		)
 
 		ch <- nil
 	}()
+
 	if async {
 		return nil
 	}
 
-	r := <-ch
-	if r != nil {
-		return r
-	}
-	return nil
+	return <-ch
 }
 
 func Push(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
