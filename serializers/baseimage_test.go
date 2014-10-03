@@ -20,6 +20,7 @@ var _ = Describe("base image serializer", func() {
 		var model = &baseimage.BaseImage{
 			ID:        5,
 			Name:      "Go",
+			Slug:      "golang",
 			Repo:      "nitrousio/golang:latest",
 			CreatedAt: &now,
 			UpdatedAt: &now,
@@ -32,6 +33,7 @@ var _ = Describe("base image serializer", func() {
 			Expect(b).To(MatchJSON(fmt.Sprintf(`{
 				"id": 5,
 				"name": "Go",
+				"slug": "golang",
 				"repo": "nitrousio/golang:latest",
 				"description": "",
 				"created_at": %s,

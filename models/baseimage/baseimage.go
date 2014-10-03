@@ -10,6 +10,7 @@ type BaseImage struct {
 	ID          int64      `db:"id"`
 	Name        string     `db:"name"`
 	Repo        string     `db:"repo"`
+	Slug        string     `db:"slug"`
 	Description string     `db:"description"`
 	CreatedAt   *time.Time `db:"created_at"`
 	UpdatedAt   *time.Time `db:"updated_at"`
@@ -24,7 +25,7 @@ func All(d db.QueryReceiver) ([]*BaseImage, error) {
 }
 
 func (b *BaseImage) Insert(d db.QueryReceiver) error {
-	nstmt, err := d.PrepareNamed(`INSERT INTO base_images (name, repo, description) VALUES (:name, :repo, :description) RETURNING *;`)
+	nstmt, err := d.PrepareNamed(`INSERT INTO base_images (name, repo, slug, description) VALUES (:name, :repo, :slug, :description) RETURNING *;`)
 	if err != nil {
 		return err
 	}

@@ -402,5 +402,11 @@ func init() {
 				);
 			`,
 		},
+		{
+			Version: "315",
+			Up: `
+				ALTER TABLE base_images ADD COLUMN slug character varying(255) DEFAULT '' NOT NULL;
+			`,
+		},
 	}
 }

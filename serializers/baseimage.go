@@ -9,6 +9,7 @@ import (
 type BaseImage struct {
 	ID          int64      `json:"id"`
 	Name        string     `json:"name"`
+	Slug        string     `json:"slug,omitempty"`
 	Repo        string     `json:"repo"`
 	Description string     `json:"description"`
 	CreatedAt   *time.Time `json:"created_at"`
@@ -22,6 +23,7 @@ func SerializeBaseImage(img *baseimage.BaseImage) *BaseImage {
 	return &BaseImage{
 		ID:          img.ID,
 		Name:        img.Name,
+		Slug:        img.Slug,
 		Repo:        img.Repo,
 		Description: img.Description,
 		CreatedAt:   img.CreatedAt,

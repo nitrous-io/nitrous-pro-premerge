@@ -16,6 +16,7 @@ App.EventsSocket = Lib.Socket.extend
 
   didReceiveMessage: (ev) ->
     msg = JSON.parse(ev.data)
+    console.log msg.name, msg.data
     @trigger msg.name, msg.data
     @_super.apply this, arguments
 

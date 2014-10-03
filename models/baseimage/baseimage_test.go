@@ -35,11 +35,11 @@ var _ = Describe("models/baseimage", func() {
 	Describe("All()", func() {
 		BeforeEach(func() {
 			var err error
-			_, err = db.Exec("INSERT INTO base_images (name, repo, description) values ($1, $2, $3);", "Go", "nitrousio/golang:latest", "")
+			_, err = db.Exec("INSERT INTO base_images (name, slug, repo, description) values ($1, $2, $3, $4);", "Go", "golang", "nitrousio/golang:latest", "")
 			Expect(err).To(BeNil())
-			_, err = db.Exec("INSERT INTO base_images (name, repo, description) values ($1, $2, $3);", "Node.js", "nitrousio/nodejs:latest", "")
+			_, err = db.Exec("INSERT INTO base_images (name, slug, repo, description) values ($1, $2, $3, $4);", "Node.js", "nodejs", "nitrousio/nodejs:latest", "")
 			Expect(err).To(BeNil())
-			_, err = db.Exec("INSERT INTO base_images (name, repo, description) values ($1, $2, $3);", "PHP", "nitrousio/php:latest", "")
+			_, err = db.Exec("INSERT INTO base_images (name, slug, repo, description) values ($1, $2, $3, $4);", "PHP", "php", "nitrousio/php:latest", "")
 			Expect(err).To(BeNil())
 		})
 
@@ -56,6 +56,7 @@ var _ = Describe("models/baseimage", func() {
 			var err error
 			img := &baseimage.BaseImage{
 				Name:        "Go",
+				Slug:        "golang",
 				Repo:        "nitrousio/golang:latest",
 				Description: "Go development environment",
 			}
@@ -68,6 +69,7 @@ var _ = Describe("models/baseimage", func() {
 			Expect(b).NotTo(BeNil())
 			Expect(b.ID).NotTo(BeZero())
 			Expect(b.Name).To(Equal("Go"))
+			Expect(b.Slug).To(Equal("golang"))
 			Expect(b.Repo).To(Equal("nitrousio/golang:latest"))
 			Expect(b.Description).To(Equal("Go development environment"))
 			Expect(b.CreatedAt).NotTo(BeNil())
