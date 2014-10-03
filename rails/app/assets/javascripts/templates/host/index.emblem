@@ -81,7 +81,7 @@
   else
     if isStopped
       .left
-        button.ui.btn click='showTerminateDialog target="view"' Terminate
+        button.ui.btn click='showTerminateDialog target="view"' Terminate...
       .right
         button.ui.btn.primary click='start' Start
     else
