@@ -823,12 +823,12 @@ var _ = Describe("controllers/hosts", func() {
 					message: okResponse,
 					status:  http.StatusOK,
 				})
-
 				hosts.HostbuilderClient = hb
 
 				hs.H.State = host.StateStopped
 				err := hs.H.Update(db)
 				Expect(err).To(BeNil())
+
 				doRequest(hs.H.Slug)
 
 				Expect(res.Code).To(Equal(http.StatusBadRequest))
@@ -836,6 +836,28 @@ var _ = Describe("controllers/hosts", func() {
 				errType, errDesc := ErrorSlug(res.Body)
 				Expect(errType).To(Equal("invalid_state"))
 				Expect(errDesc).To(Equal("host is not running"))
+			})
+		})
+
+		Context("when host is in the stopping state", func() {
+			It("allows host to be stopped", func() {
+				hb := hostbuilderclient.NewHostbuilder("www.example.com")
+				replaceTransport(hb, &FakeRoundTripper{
+					message: okResponse,
+					status:  http.StatusOK,
+				})
+				hosts.HostbuilderClient = hb
+
+				hs.H.State = host.StateStopping
+				err := hs.H.Update(db)
+				Expect(err).To(BeNil())
+
+				doRequest(hs.H.Slug)
+
+				Expect(res.Code).To(Equal(http.StatusOK))
+				h, err := host.Find(db, hs.U, hs.H.Slug)
+				Expect(err).To(BeNil())
+				Expect(h.State).To(Equal(host.StateStopped))
 			})
 		})
 
@@ -1023,6 +1045,7 @@ var _ = Describe("controllers/hosts", func() {
 				hs.H.State = host.StateStopped
 				err := hs.H.Update(db)
 				Expect(err).To(BeNil())
+
 				doRequest(hs.H.Slug)
 
 				Expect(res.Code).To(Equal(http.StatusBadRequest))
@@ -1030,6 +1053,28 @@ var _ = Describe("controllers/hosts", func() {
 				errType, errDesc := ErrorSlug(res.Body)
 				Expect(errType).To(Equal("invalid_state"))
 				Expect(errDesc).To(Equal("host is not running"))
+			})
+		})
+
+		Context("when host is in the restarting state", func() {
+			It("allows host to be restarted", func() {
+				hb := hostbuilderclient.NewHostbuilder("www.example.com")
+				replaceTransport(hb, &FakeRoundTripper{
+					message: okResponse,
+					status:  http.StatusOK,
+				})
+				hosts.HostbuilderClient = hb
+
+				hs.H.State = host.StateRestarting
+				err := hs.H.Update(db)
+				Expect(err).To(BeNil())
+
+				doRequest(hs.H.Slug)
+
+				Expect(res.Code).To(Equal(http.StatusOK))
+				h, err := host.Find(db, hs.U, hs.H.Slug)
+				Expect(err).To(BeNil())
+				Expect(h.State).To(Equal(host.StateRunning))
 			})
 		})
 

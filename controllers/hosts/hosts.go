@@ -203,7 +203,10 @@ func Start(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Req
 }
 
 func Stop(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
-	if h.State != host.StateRunning {
+	switch h.State {
+	case host.StateRunning, host.StateStopping:
+		// Pass.
+	default:
 		return errHostStopInvalidState
 	}
 
@@ -221,7 +224,10 @@ func Stop(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Requ
 }
 
 func Restart(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
-	if h.State != host.StateRunning {
+	switch h.State {
+	case host.StateRunning, host.StateRestarting:
+		// Pass.
+	default:
 		return errHostRestartInvalidState
 	}
 
