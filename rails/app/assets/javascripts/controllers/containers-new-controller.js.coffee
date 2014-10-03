@@ -49,7 +49,7 @@ App.ContainersNewController = Em.Controller.extend
       saving: false
 
   hostImagesIsEmpty: Em.computed.empty('selectedHost.images')
-  hostVolumesIsEmpty: Em.computed.empty('selectedHost.images')
+  hostVolumesIsEmpty: Em.computed.empty('selectedHost.volumes')
 
   envVars: (->
     return unless envVarHash = @get 'envVarHash'

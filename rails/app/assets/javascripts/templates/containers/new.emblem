@@ -59,9 +59,24 @@ form submit='create target="view"'
         | Container Configuration
 
       .container-config-btns
-        a.ui.btn.raised class={saving:disabled} href='#' click='openVolumeMounts target="view"' Volume Mounts
-        a.ui.btn.raised class={saving:disabled} href='#' click='openPortBindings target="view"' Port Bindings
-        a.ui.btn.raised class={saving:disabled} href='#' click='openEnvVars target="view"' Environment Variables
+        a.ui.btn.raised class={saving:disabled} href='#' click='openVolumeMounts target="view"'
+          | Volume Mounts
+          if volumeMounts.length
+            |&nbsp;(
+            = volumeMounts.length
+            |)
+        a.ui.btn.raised class={saving:disabled} href='#' click='openPortBindings target="view"'
+          | Port Bindings
+          if portBindings.length
+            |&nbsp;(
+            = portBindings.length
+            |)
+        a.ui.btn.raised class={saving:disabled} href='#' click='openEnvVars target="view"'
+          | Environment Variables
+          if envVars.length
+            |&nbsp;(
+            = envVars.length
+            |)
 
   .card-footer.bordered
     if saving
