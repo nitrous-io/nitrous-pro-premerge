@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/nitrous-io/nitrous/controllers"
@@ -203,10 +204,8 @@ func Start(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Req
 }
 
 func Stop(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
-	switch h.State {
-	case host.StateRunning, host.StateStopping:
-		// Pass.
-	default:
+	force, _ := strconv.ParseBool(r.FormValue("force"))
+	if !force && h.State != host.StateRunning {
 		return errHostStopInvalidState
 	}
 
@@ -224,10 +223,8 @@ func Stop(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Requ
 }
 
 func Restart(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
-	switch h.State {
-	case host.StateRunning, host.StateRestarting:
-		// Pass.
-	default:
+	force, _ := strconv.ParseBool(r.FormValue("force"))
+	if !force && h.State != host.StateRunning {
 		return errHostRestartInvalidState
 	}
 
