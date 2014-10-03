@@ -30,6 +30,9 @@ App.ContainersNewView = Em.View.extend
 
   ).property 'selectedOption', 'selectedHostImage', 'selectedBaseImage', 'customImage', 'controller.hostImagesIsEmpty'
 
+  baseImageOptionDisabled: (->
+    !App.get('baseImages') || @get('controller.saving')
+  ).property 'App.baseImages', 'controller.saving'
   hostImageOptionDisabled: Em.computed.or('controller.hostImagesIsEmpty', 'controller.saving')
 
   createButtonDisabled: (->
@@ -60,6 +63,11 @@ App.ContainersNewView = Em.View.extend
     if slug = @get('controller.preselectHost')
       @set 'controller.selectedHostSlug', slug
   ).observes 'controller.preselectHost'
+
+  baseImagesDidChange: (->
+    Em.run.scheduleOnce 'afterRender', this, ->
+      @$('select[name=containers-new-option-base-image]')?.change()
+  ).observes 'App.baseImages.@each'
 
   hostImagesDidChange: (->
     Em.run.scheduleOnce 'afterRender', this, ->

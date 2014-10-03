@@ -195,9 +195,7 @@ func baseImages(d db.QueryReceiver) error {
 		{Name: "Node.js", Repo: "nitrousio/nodejs:latest", Description: ""},
 		{Name: "PHP", Repo: "nitrousio/php:latest", Description: ""},
 		{Name: "Python", Repo: "nitrousio/python:latest", Description: ""},
-		{Name: "Python with Django", Repo: "nitrousio/django:latest", Description: ""},
 		{Name: "Ruby", Repo: "nitrousio/ruby:latest", Description: ""},
-		{Name: "Ruby on Rails", Repo: "nitrousio/rails:latest", Description: ""},
 		{Name: "Ubuntu", Repo: "nitrousio/ubuntu:trusty", Description: ""},
 	}
 	for _, b := range baseImages {

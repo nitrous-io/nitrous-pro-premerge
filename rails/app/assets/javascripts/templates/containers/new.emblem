@@ -23,25 +23,25 @@ form submit='create target="view"'
         | Image
 
       .image-selection
+        ul.ui.checkbox-group class={view.baseImageOptionDisabled:disabled}
+          li
+            .ui.checkbox
+              input type='radio' id='containers-new-option-base-image' name='option' checked='checked' value='base-image' disabled={view.baseImageOptionDisabled}
+              label
+            label for='containers-new-option-base-image' Use Nitrous.IO Base Image
+
+        .ui.select.indent
+          Ember.Select class='option-input' name='containers-new-option-base-image' content=App.baseImages optionValuePath='content.repo' optionLabelPath='content.repo' value=view.selectedBaseImage disabled=view.baseImageOptionDisabled
+
         ul.ui.checkbox-group class={view.hostImageOptionDisabled:disabled}
           li
             .ui.checkbox
-              input type='radio' id='containers-new-option-host-image' name='option' checked='checked' value='host-image' disabled={view.hostImageOptionDisabled}
+              input type='radio' id='containers-new-option-host-image' name='option' value='host-image' disabled={view.hostImageOptionDisabled}
               label
             label for='containers-new-option-host-image' Use Image On This Host
 
         .ui.select.indent
           Ember.Select class='option-input' name='containers-new-option-host-image' content=selectedHost.images optionValuePath='content.slugAndTag' optionLabelPath='content.slugAndTag' value=view.selectedHostImage disabled=view.hostImageOptionDisabled
-
-        ul.ui.checkbox-group class={saving:disabled}
-          li
-            .ui.checkbox
-              input type='radio' id='containers-new-option-base-image' name='option' value='base-image' disabled=saving
-              label
-            label for='containers-new-option-base-image' Use Nitrous.IO Base Image
-
-        .ui.select.indent
-          Ember.Select class='option-input' name='containers-new-option-base-image' content=App.baseImages optionValuePath='content.repo' optionLabelPath='content.repo' value=view.selectedBaseImage disabled=saving
 
         ul.ui.checkbox-group class={saving:disabled}
           li
