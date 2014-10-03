@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -21,12 +22,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/nitrous-io/freighter/freighterclient"
 	"github.com/nitrous-io/nitrous-common/isarchive"
 	"github.com/nitrous-io/nitrous-common/logger"
 
 	"github.com/nitrous-io/nitrous/controllers"
 	"github.com/nitrous-io/nitrous/db"
+	"github.com/nitrous-io/nitrous/models/cert"
 	"github.com/nitrous-io/nitrous/models/host"
 	"github.com/nitrous-io/nitrous/models/image"
 	"github.com/nitrous-io/nitrous/models/token"
@@ -1029,110 +1032,6 @@ var _ = Describe("controllers/images", func() {
 		})
 	})
 
-	Describe("POST /api/v0/hosts/{slug}/images/{image}/push", func() {
-		var i *image.Image
-		BeforeEach(func() {
-			i = &image.Image{
-				UserID:      hs.U.ID,
-				HostID:      hs.H.ID,
-				FreighterID: "cafebabe",
-				Slug:        "nitrousio/devenv",
-				Tag:         "latest",
-			}
-			err := i.Insert(db)
-			Expect(err).To(BeNil())
-		})
-
-		doRequest := func(host, image string, params *url.Values) *httptest.ResponseRecorder {
-			req, err := NewAuthedFormRequest(t, "POST", fmt.Sprintf("/api/v0/hosts/%v/images/%s/push", host, image), params)
-			Expect(err).To(BeNil())
-			res := httptest.NewRecorder()
-			svr.Router().ServeHTTP(res, req)
-			return res
-		}
-
-		It("calls PushImage", func() {
-			res := doRequest("foo", "nitrousio/devenv:latest", &url.Values{"repository": []string{"myuser/scratch"}})
-			Expect(mockClient.PushImageCalled).To(Equal(1))
-			Expect(res.Code).To(Equal(http.StatusOK))
-		})
-
-		It("publishes an image pushed event with the image slug and repository", func(done Done) {
-			ch := svr.Events.Subscribe(u.Topic())
-			defer svr.Events.Unsubscribe(ch, u.Topic())
-
-			doRequest("foo", "nitrousio/devenv:latest", &url.Values{"repository": []string{"myuser/scratch"}})
-
-			msg := <-ch
-			evt, ok := msg.(*controllers.Event)
-			Expect(ok).To(BeTrue())
-			Expect(evt.Name).To(Equal(controllers.EventImagePushed))
-			Expect(evt.Data).To(BeEquivalentTo(struct {
-				Image      string `json:"image"`
-				Repository string `json:"repository"`
-			}{
-				Image:      "nitrousio/devenv:latest",
-				Repository: "myuser/scratch",
-			}))
-			close(done)
-		})
-
-		It("publishes an image pushed event with the image ID and repository", func(done Done) {
-			ch := svr.Events.Subscribe(u.Topic())
-			defer svr.Events.Unsubscribe(ch, u.Topic())
-
-			doRequest("foo", strconv.FormatInt(i.ID, 10), &url.Values{"repository": []string{"myuser/scratch"}})
-
-			msg := <-ch
-			evt, ok := msg.(*controllers.Event)
-			Expect(ok).To(BeTrue())
-			Expect(evt.Name).To(Equal(controllers.EventImagePushed))
-			Expect(evt.Data).To(BeEquivalentTo(struct {
-				Image      string `json:"image"`
-				Repository string `json:"repository"`
-			}{
-				Image:      "nitrousio/devenv:latest",
-				Repository: "myuser/scratch",
-			}))
-			close(done)
-		})
-
-		It("requires repository param", func() {
-			res := doRequest("foo", "devenv", nil)
-			Expect(mockClient.PushImageCalled).To(Equal(0))
-			errType, errDesc := ErrorSlug(res.Body)
-			Expect(errType).To(Equal("invalid_request"))
-			Expect(errDesc).To(Equal("repository is required"))
-		})
-
-		It("returns 404 if the image could not be located", func() {
-			mockClient.PushImageError = freighterclient.ErrImagePushAuthRequired
-			res := doRequest("foo", "nitrousio/devenv:1203", &url.Values{"repository": []string{"scratch"}})
-			Expect(res.Code).To(Equal(http.StatusNotFound))
-			Expect(mockClient.PushImageCalled).To(Equal(0))
-			errType, _ := ErrorSlug(res.Body)
-			Expect(errType).To(Equal("not_found"))
-		})
-
-		It("returns HTTP 400 & registry_auth_failed if freighterclient returns an ErrImagePushAuthRequired", func() {
-			mockClient.PushImageError = freighterclient.ErrImagePushAuthRequired
-			res := doRequest("foo", "nitrousio/devenv:latest", &url.Values{"repository": []string{"scratch"}})
-			Expect(res.Code).To(Equal(http.StatusBadRequest))
-			Expect(mockClient.PushImageCalled).To(Equal(1))
-			errType, _ := ErrorSlug(res.Body)
-			Expect(errType).To(Equal("registry_auth_failed"))
-		})
-
-		It("returns 500 on freighterclient error", func() {
-			mockClient.PushImageError = &freighterclient.StatusError{Code: 418}
-			res := doRequest("foo", "nitrousio/devenv:latest", &url.Values{"repository": []string{"scratch"}})
-			Expect(res.Code).To(Equal(http.StatusInternalServerError))
-			Expect(mockClient.PushImageCalled).To(Equal(1))
-			errType, _ := ErrorSlug(res.Body)
-			Expect(errType).To(Equal("internal_server_error"))
-		})
-	})
-
 	Describe("POST /api/v0/hosts/{slug}/images/{image}/tag", func() {
 		BeforeEach(func() {
 			i := &image.Image{
@@ -1274,3 +1173,126 @@ var _ = Describe("controllers/images", func() {
 		})
 	})
 })
+
+// freighter test server
+type freighterServer struct {
+	*httptest.Server
+	image string
+	tag   string
+
+	pullError     bool
+	existingImage *freighterclient.Image
+	imageUpdated  bool
+
+	pushError    bool
+	pushUnAuthed bool
+	pushCalled   bool
+}
+
+func (s *freighterServer) inspectImage(w http.ResponseWriter, r *http.Request) {
+	if s.existingImage != nil && !s.imageUpdated {
+		json.NewEncoder(w).Encode(map[string]freighterclient.Image{
+			"image": *s.existingImage,
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]freighterclient.Image{
+		"image": {
+			ID:          "123asd",
+			Name:        s.image,
+			Tag:         s.tag,
+			CreatedAt:   time.Now().Unix(),
+			ActualSize:  42,
+			VirtualSize: 666,
+		},
+	})
+}
+
+type imgTestCtx struct {
+	user  *user.User
+	token *token.Token
+	host  *host.Host
+}
+
+func (s *freighterServer) address() (string, int64) {
+	addr := s.Listener.Addr().String()
+	host, port, _ := net.SplitHostPort(addr)
+	portInt, _ := strconv.ParseInt(port, 10, 64)
+	return host, portInt
+}
+
+func (s *freighterServer) start(db *db.Database, ctx *imgTestCtx) {
+	crt, err := cert.Find(db, ctx.host.ID)
+	Expect(err).To(BeNil(), "no cert found for host")
+	s.Server.TLS, err = TLSConfig(ctx.host.Hostname(), []byte(crt.ServerCert), []byte(crt.ServerKey))
+	Expect(err).To(BeNil(), "bad tls config")
+	s.StartTLS()
+}
+
+func newFreighterServer(image, tag string) *freighterServer {
+	s := &freighterServer{image: image, tag: tag, imageUpdated: true}
+	r := mux.NewRouter()
+	r.HandleFunc("/images/pull", s.pullImage).Methods("POST")
+	r.HandleFunc("/images/push", s.pushImage).Methods("POST")
+	r.HandleFunc("/images/inspect", s.inspectImage).Methods("GET")
+	s.Server = httptest.NewUnstartedServer(r)
+	return s
+}
+
+// insert a dummy image to be used in case the image exists in db
+func (c *imgTestCtx) insertImage(fs *freighterServer, db *db.Database) {
+	fs.existingImage = &freighterclient.Image{ID: "cafebabe", Name: "scratch", Tag: "latest"}
+
+	u, h := c.user, c.host
+	i := &image.Image{
+		UserID:      u.ID,
+		HostID:      h.ID,
+		FreighterID: "cafebabe",
+		Name:        "scratch v1",
+		Slug:        "scratch",
+		Tag:         "latest",
+	}
+	err := i.Insert(db)
+	Expect(err).To(BeNil(), "failed to insert test image")
+}
+
+func newImgTestCtx(fs *freighterServer, db *db.Database) *imgTestCtx {
+	fsHost, fsPort := fs.address()
+
+	var err error
+	u := &user.User{
+		Username: "foo",
+		Password: "123456",
+		Email:    "foo@example.com",
+	}
+
+	err = WrapInTransaction(db, u.Insert)
+	Expect(err).To(BeNil(), "failed to setup test user")
+
+	t := &token.Token{
+		UserID: u.ID,
+		Token:  "valid-token",
+	}
+	err = t.Insert(db)
+	Expect(err).To(BeNil(), "failed to setup test user's token")
+
+	hs, err := CreateHostStack(db, &HostStack{
+		H: &host.Host{
+			Slug:           "foo",
+			IPAddress:      sql.NullString{fsHost, true},
+			FreighterdPort: sql.NullInt64{fsPort, true},
+		},
+		U: u,
+	})
+	Expect(err).To(BeNil(), "failed to prepare host stack")
+
+	hs, err = GenerateHostCert(db, hs)
+	Expect(err).To(BeNil(), "failed to generate host cert")
+
+	return &imgTestCtx{
+		user:  u,
+		token: t,
+		host:  hs.H,
+	}
+}

@@ -185,55 +185,6 @@ func Remove(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Re
 	return nil
 }
 
-func Push(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
-	db := env.DB
-	cl, err := controllers.NewFreighterClient(db, h)
-	if err != nil {
-		return err
-	}
-
-	slugOrId := mux.Vars(r)["image"]
-	if slugOrId == "" {
-		return errIDOrSlugRequired
-	}
-
-	repo := r.FormValue("repository")
-	if repo == "" {
-		return errRepoRequired
-	}
-
-	img, err := image.Find(db, env.User, h, slugOrId)
-	if err != nil {
-		return errImageMissing
-	}
-
-	if err := cl.PushImage(img.FullRepository(), repo); err != nil {
-		if err == freighterclient.ErrImagePushAuthRequired {
-			env.Status = http.StatusBadRequest
-			env.Data = map[string]interface{}{
-				"error":             "registry_auth_failed",
-				"error_description": err.Error(),
-			}
-			return nil
-		}
-		return err
-	}
-
-	type data struct {
-		Image      string `json:"image"`
-		Repository string `json:"repository"`
-	}
-	env.Events.Publish(
-		controllers.NewEvent(controllers.EventImagePushed, data{Image: img.FullRepository(), Repository: repo}),
-		env.User.Topic(),
-	)
-	env.Status = http.StatusOK
-	env.Data = map[string]interface{}{
-		"status": "ok",
-	}
-	return nil
-}
-
 func Tag(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 	db := env.DB
 	cl, err := controllers.NewFreighterClient(db, h)
