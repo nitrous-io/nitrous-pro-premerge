@@ -26,7 +26,8 @@ App.EventsSocket = Lib.Socket.extend
 
     ['container.started', 'container.stopped', 'container.restarted', 'container.updated'].forEach (evt) =>
       @on evt, (data) ->
-        findContainer(data)?.load(data)
+        containerData = data.container
+        findContainer(containerData)?.load(containerData)
 
     ['host.created', 'host.destroyed'].forEach (evt) =>
       @on evt, (data) ->
@@ -41,25 +42,30 @@ App.EventsSocket = Lib.Socket.extend
       findHostBySlug(data)?.set 'progress', null
 
     @on 'host.created', (data) =>
-      return unless host = findHostBySlug(data)
-      host.load(data)
+      hostData = data.host
+      return unless host = findHostBySlug(hostData)
+      host.load(hostData)
       host.set 'progress', null
 
     ['host.started', 'host.stopped', 'host.restarted', 'host.updated'].forEach (evt) =>
       @on evt, (data) ->
-        findHost(data)?.load(data)
+        hostData = data.host
+        findHost(hostData)?.load(hostData)
 
     ['volume.created', 'volume.destroyed'].forEach (evt) =>
       @on evt, (data) ->
-        findAllVolumes(data)?.reload()
+        volumeData = data.volume
+        findAllVolumes(volumeData)?.reload()
 
     ['registry.added', 'registry.removed'].forEach (evt) =>
       @on evt, (data) ->
-        findAllRegistries(data)?.reload()
+        registryData = data.registry
+        findAllRegistries(registryData)?.reload()
 
     ['image.created', 'image.removed', 'image.tagged'].forEach (evt) =>
       @on evt, (data) ->
-        findAllImages(data)?.reload()
+        imageData = data.image
+        findAllImages(imageData)?.reload()
 
     ['image.building', 'image.pulling'].forEach (evt) =>
       @on evt, (data) ->
@@ -71,23 +77,27 @@ App.EventsSocket = Lib.Socket.extend
       findImage(data)?.set 'progress', null
 
     @on 'image.built', (data) ->
-      return unless image = findImage(data)
-      image.load(data)
+      imageData = data.image
+      return unless image = findImage(imageData)
+      image.load(imageData)
       image.set 'progress', null
 
     ['image.pulled', 'image.pull_failed'].forEach (evt) =>
       @on evt, (data) ->
-        return unless image = findImage(data)
-        image.load(data)
+        imageData = data.image
+        return unless image = findImage(imageData)
+        image.load(imageData)
         image.set 'updating', false
         image.set 'progress', null
 
     @on 'image.updated', (data) ->
-      findImage(data)?.load(data)
+      imageData = data.image
+      findImage(imageData)?.load(imageData)
 
     @on 'image.pushed', (data) ->
-      return unless (data = data.image) && (image = findImage(data))
-      image.load(data)
+      imageData = data.image
+      return unless imageData && (image = findImage(imageData))
+      image.load(imageData)
       image.set 'pushing', false
 
 findAllContainers = ->

@@ -39,7 +39,8 @@ App.ImagesPullController = Em.Controller.extend
         @set 'image', image
 
         onImagePullFailed = (data) =>
-          return unless data.id == image.get('id')
+          imageData = data.image
+          return unless imageData.id == image.get('id')
           events.off 'image.pull_failed', onImagePullFailed
           events.off 'image.pulled', onImagePulled
           @set 'image', null
@@ -51,7 +52,8 @@ App.ImagesPullController = Em.Controller.extend
           @set 'saving', false
 
         onImagePulled = (data) =>
-          return unless data.id == image.get('id')
+          imageData = data.image
+          return unless imageData.id == image.get('id')
           events.off 'image.pull_failed', onImagePullFailed
           events.off 'image.pulled', onImagePulled
           @transitionToRoute 'host.images', @get('selectedHostSlug')

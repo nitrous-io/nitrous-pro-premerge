@@ -41,7 +41,8 @@ App.ImagesNewController = Em.Controller.extend
       @set 'image', image
 
       onImageBuildFailed = (data) =>
-        return unless data.id == image.get('id')
+        imageData = data.image
+        return unless imageData.id == image.get('id')
         events.off 'image.build_failed', onImageBuildFailed
         events.off 'image.built', onImageBuilt
         @set 'image', null
@@ -53,7 +54,8 @@ App.ImagesNewController = Em.Controller.extend
         @set 'saving', false
 
       onImageBuilt = (data) =>
-        return unless data.id == image.get('id')
+        imageData = data.image
+        return unless imageData.id == image.get('id')
         events.off 'image.build_failed', onImageBuildFailed
         events.off 'image.built', onImageBuilt
         @transitionToRoute 'host.images', hostSlug
