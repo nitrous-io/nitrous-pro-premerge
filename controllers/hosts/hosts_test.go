@@ -923,15 +923,9 @@ var _ = Describe("controllers/hosts", func() {
 		})
 
 		Context("when host has running containers", func() {
-			var (
-				c1, c2     *container.Container
-				mockClient *freighterclient.MockClient
-			)
+			var c1, c2 *container.Container
 
 			BeforeEach(func() {
-				mockClient = &freighterclient.MockClient{}
-				StubDefaultFreighterFn(mockClient)
-
 				hb := hostbuilderclient.NewHostbuilder("www.example.com")
 				replaceTransport(hb, &FakeRoundTripper{
 					message: okResponse,
@@ -943,6 +937,7 @@ var _ = Describe("controllers/hosts", func() {
 					CID:    "beefface",
 					Slug:   "rails-box",
 					Image:  "nitrous-base",
+					State:  container.StateRunning,
 					UserID: u.ID,
 					HostID: hs.H.ID,
 				}
@@ -952,29 +947,12 @@ var _ = Describe("controllers/hosts", func() {
 					CID:    "cafedead",
 					Slug:   "python-box",
 					Image:  "nitrous-base",
+					State:  container.StateRunning,
 					UserID: u.ID,
 					HostID: hs.H.ID,
 				}
 				err = c2.Insert(db)
 				Expect(err).To(BeNil())
-				mockClient.Containers = []*freighterclient.Container{
-					&freighterclient.Container{ID: "beefface"},
-					&freighterclient.Container{ID: "cafedead"},
-				}
-			})
-
-			It("calls stop on all containers", func() {
-				doRequest(hs.H.Slug)
-				Expect(res.Code).To(Equal(http.StatusOK))
-				Expect(mockClient.StopCalled).To(Equal(2))
-			})
-
-			It("returns error if stop failed", func() {
-				mockClient.StopError = errors.New("can't stop won't stop")
-				doRequest(hs.H.Slug)
-				Expect(mockClient.StopCalled).To(Equal(2))
-				_, errDesc := ErrorSlug(res.Body)
-				Expect(errDesc).To(Equal("unable to stop containers rails-box, python-box"))
 			})
 
 			checkStoppedMsg := func(msg interface{}, slug string) {
@@ -984,11 +962,15 @@ var _ = Describe("controllers/hosts", func() {
 				evtData, ok := evt.Data.(map[string]*serializers.Container)
 				Expect(ok).To(BeTrue())
 				Expect(evtData["container"].Slug).To(Equal(slug))
+				Expect(evtData["container"].State).To(Equal(container.StateStopped.String()))
 			}
 
 			It("publishes container stopped events", func(done Done) {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
+
+				Expect(c1.State).To(Equal(container.StateRunning))
+				Expect(c2.State).To(Equal(container.StateRunning))
 
 				doRequest(hs.H.Slug)
 
@@ -1135,15 +1117,9 @@ var _ = Describe("controllers/hosts", func() {
 		})
 
 		Context("when host has running containers", func() {
-			var (
-				c1, c2     *container.Container
-				mockClient *freighterclient.MockClient
-			)
+			var c1, c2 *container.Container
 
 			BeforeEach(func() {
-				mockClient = &freighterclient.MockClient{}
-				StubDefaultFreighterFn(mockClient)
-
 				hb := hostbuilderclient.NewHostbuilder("www.example.com")
 				replaceTransport(hb, &FakeRoundTripper{
 					message: okResponse,
@@ -1155,6 +1131,7 @@ var _ = Describe("controllers/hosts", func() {
 					CID:    "beefface",
 					Slug:   "rails-box",
 					Image:  "nitrous-base",
+					State:  container.StateRunning,
 					UserID: u.ID,
 					HostID: hs.H.ID,
 				}
@@ -1164,29 +1141,12 @@ var _ = Describe("controllers/hosts", func() {
 					CID:    "cafedead",
 					Slug:   "python-box",
 					Image:  "nitrous-base",
+					State:  container.StateRunning,
 					UserID: u.ID,
 					HostID: hs.H.ID,
 				}
 				err = c2.Insert(db)
 				Expect(err).To(BeNil())
-				mockClient.Containers = []*freighterclient.Container{
-					&freighterclient.Container{ID: "beefface"},
-					&freighterclient.Container{ID: "cafedead"},
-				}
-			})
-
-			It("calls stop on all containers", func() {
-				doRequest(hs.H.Slug)
-				Expect(res.Code).To(Equal(http.StatusOK))
-				Expect(mockClient.StopCalled).To(Equal(2))
-			})
-
-			It("returns error if stop failed", func() {
-				mockClient.StopError = errors.New("can't stop won't stop")
-				doRequest(hs.H.Slug)
-				Expect(mockClient.StopCalled).To(Equal(2))
-				_, errDesc := ErrorSlug(res.Body)
-				Expect(errDesc).To(Equal("unable to stop containers rails-box, python-box"))
 			})
 
 			checkStoppedMsg := func(msg interface{}, slug string) {
@@ -1196,11 +1156,15 @@ var _ = Describe("controllers/hosts", func() {
 				evtData, ok := evt.Data.(map[string]*serializers.Container)
 				Expect(ok).To(BeTrue())
 				Expect(evtData["container"].Slug).To(Equal(slug))
+				Expect(evtData["container"].State).To(Equal(container.StateStopped.String()))
 			}
 
 			It("publishes container stopped events", func(done Done) {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
+
+				Expect(c1.State).To(Equal(container.StateRunning))
+				Expect(c2.State).To(Equal(container.StateRunning))
 
 				doRequest(hs.H.Slug)
 
