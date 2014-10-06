@@ -7,9 +7,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/nitrous-io/nitrous-common/logger"
+	"github.com/nitrous-io/nitrous/controllers/tokens"
 	"github.com/nitrous-io/nitrous/db"
 	"github.com/nitrous-io/nitrous/models/token"
 	"github.com/nitrous-io/nitrous/models/user"
@@ -22,6 +24,15 @@ import (
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "controllers/tokens")
+}
+
+func init() {
+	tokens.LoginAttemptsWaitTime = map[int]time.Duration{
+		3: time.Duration(0),
+		6: time.Millisecond * 200,
+		9: time.Millisecond * 400,
+	}
+	tokens.LoginAttemptsFinalWaitTime = time.Millisecond * 600
 }
 
 var _ = Describe("controllers/tokens", func() {
@@ -137,17 +148,85 @@ var _ = Describe("controllers/tokens", func() {
 		}
 
 		Context("when a wrong password is given", func() {
-			BeforeEach(func() {
+			It("responds with 400 bad request", func() {
 				params.Set("password", "111111")
 				doRequest()
-			})
 
-			It("responds with 400 bad request", func() {
 				Expect(res.Code).To(Equal(http.StatusBadRequest))
 				j := map[string]interface{}{}
 				err := json.Unmarshal(res.Body.Bytes(), &j)
 				Expect(err).To(BeNil())
 				Expect(j["error"]).To(Equal("invalid_grant"))
+			})
+
+			It("should not delay under 3 requests", func() {
+				_, err := db.Exec("UPDATE users SET login_attempts = 0 WHERE username = $1", u.Username)
+				Expect(err).To(BeNil())
+
+				params.Set("password", "111111")
+
+				start := time.Now()
+				doRequest()
+				Expect(time.Now().Sub(start).Seconds()).To(BeNumerically("<", 0.2))
+
+				start = time.Now()
+				doRequest()
+				Expect(time.Now().Sub(start).Seconds()).To(BeNumerically("<", 0.2))
+
+				start = time.Now()
+				doRequest()
+				Expect(time.Now().Sub(start).Seconds()).To(BeNumerically("<", 0.2))
+			})
+
+			It("should delay correctly", func() {
+				_, err := db.Exec("UPDATE users SET login_attempts = 0 WHERE username = $1", u.Username)
+				Expect(err).To(BeNil())
+
+				params.Set("password", "111111")
+
+				start := time.Now()
+				doRequest()
+				Expect(time.Now().Sub(start).Seconds()).To(BeNumerically("<", 0.2))
+
+				_, err = db.Exec("UPDATE users SET login_attempts = 4 WHERE username = $1", u.Username)
+				Expect(err).To(BeNil())
+
+				start = time.Now()
+				doRequest()
+				diff := time.Now().Sub(start).Seconds()
+				Expect(diff).To(BeNumerically(">=", 0.2))
+				Expect(diff).To(BeNumerically("<", 0.4))
+
+				_, err = db.Exec("UPDATE users SET login_attempts = 7 WHERE username = $1", u.Username)
+				Expect(err).To(BeNil())
+
+				start = time.Now()
+				doRequest()
+				diff = time.Now().Sub(start).Seconds()
+				Expect(diff).To(BeNumerically(">=", 0.4))
+				Expect(diff).To(BeNumerically("<", 0.6))
+
+				_, err = db.Exec("UPDATE users SET login_attempts = 10 WHERE username = $1", u.Username)
+				Expect(err).To(BeNil())
+
+				start = time.Now()
+				doRequest()
+				diff = time.Now().Sub(start).Seconds()
+				Expect(diff).To(BeNumerically(">=", 0.6))
+			})
+
+			It("should reset the delay after a successful auth", func() {
+				_, err := db.Exec("UPDATE users SET login_attempts = 3 WHERE username = $1", u.Username)
+				Expect(err).To(BeNil())
+
+				params.Set("password", "123456")
+				start := time.Now()
+				doRequest()
+				Expect(time.Now().Sub(start).Seconds()).To(BeNumerically(">=", 0.2))
+
+				start = time.Now()
+				doRequest()
+				Expect(time.Now().Sub(start).Seconds()).To(BeNumerically("<", 0.2))
 			})
 		})
 

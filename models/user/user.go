@@ -40,6 +40,8 @@ type User struct {
 
 	Password          string `json:"-"`
 	EncryptedPassword string `db:"encrypted_password" json:"-"`
+
+	LoginAttempts int `db:"login_attempts" json:"-"`
 }
 
 func FindByID(d db.QueryReceiver, id int64) (*User, error) {
@@ -76,6 +78,28 @@ func FindByUsernameOrEmail(d db.QueryReceiver, login string) (*User, error) {
 		return nil, err
 	}
 	return user, nil
+}
+
+func GetLoginAttempts(d db.QueryReceiver, login string) (int, error) {
+	var loginAttempts int
+	err := d.QueryRowx("SELECT login_attempts FROM users WHERE username = $1 OR email = $1", login).Scan(&loginAttempts)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, nil
+		}
+		return 0, err
+	}
+	return loginAttempts, nil
+}
+
+func IncrementLoginAttempts(d db.QueryReceiver, login string) error {
+	_, err := d.Exec("UPDATE users SET login_attempts = least(login_attempts + 1, 32767) WHERE username = $1 OR email = $1", login)
+	return err
+}
+
+func ResetLoginAttempts(d db.QueryReceiver, login string) error {
+	_, err := d.Exec("UPDATE users SET login_attempts = 0 WHERE username = $1 OR email = $1", login)
+	return err
 }
 
 func (u *User) Insert(tx *sqlx.Tx) error {
