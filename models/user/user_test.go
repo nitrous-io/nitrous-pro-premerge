@@ -206,10 +206,135 @@ var _ = Describe("models/user", func() {
 		Context("when some error happens", func() {
 			It("returns error", func() {
 				db.Close()
-				u, err := user.FindByUsername(db, "foo")
+				u, err := user.FindByUsernameOrEmail(db, "foo")
 				Expect(u).To(BeNil())
 				Expect(err).NotTo(BeNil())
 			})
+		})
+	})
+
+	Describe("GetLoginAttemptsByUsername", func() {
+		Context("when a user record with a given username or email exists", func() {
+			BeforeEach(func() {
+				_, err := db.Exec("UPDATE users SET login_attempts = 0 WHERE username = $1", "foo")
+				Expect(err).To(BeNil())
+				_, err = db.Exec("UPDATE users SET login_attempts = 93 WHERE email = $1", "bar@example.com")
+				Expect(err).To(BeNil())
+			})
+
+			AfterEach(func() {
+				_, err := db.Exec("UPDATE users SET login_attempts = 0 WHERE username = $1", "foo")
+				Expect(err).To(BeNil())
+				_, err = db.Exec("UPDATE users SET login_attempts = 0 WHERE email = $1", "bar@example.com")
+				Expect(err).To(BeNil())
+			})
+
+			It("returns the initial value", func() {
+				value, err := user.GetLoginAttempts(db, "foo")
+				Expect(err).To(BeNil())
+				Expect(value).To(Equal(0))
+
+				value, err = user.GetLoginAttempts(db, "bar@example.com")
+				Expect(err).To(BeNil())
+				Expect(value).To(Equal(93))
+			})
+		})
+
+		Context("when a user record with a given username does not exist", func() {
+			It("returns nil", func() {
+				value, err := user.GetLoginAttempts(db, "bat")
+				Expect(value).To(Equal(0))
+				Expect(err).To(BeNil())
+
+				value, err = user.GetLoginAttempts(db, "bat@example.com")
+				Expect(value).To(Equal(0))
+				Expect(err).To(BeNil())
+			})
+		})
+
+		Context("when some error happens", func() {
+			It("returns error", func() {
+				db.Close()
+				value, err := user.GetLoginAttempts(db, "foo")
+				Expect(value).To(Equal(0))
+				Expect(err).NotTo(BeNil())
+			})
+		})
+	})
+
+	Describe("IncrementLoginAttempts", func() {
+		BeforeEach(func() {
+			_, err := db.Exec("UPDATE users SET login_attempts = 0 WHERE username = $1", "foo")
+			Expect(err).To(BeNil())
+			_, err = db.Exec("UPDATE users SET login_attempts = 93 WHERE email = $1", "bar@example.com")
+			Expect(err).To(BeNil())
+		})
+
+		AfterEach(func() {
+			_, err := db.Exec("UPDATE users SET login_attempts = 0 WHERE username = $1", "foo")
+			Expect(err).To(BeNil())
+			_, err = db.Exec("UPDATE users SET login_attempts = 0 WHERE email = $1", "bar@example.com")
+			Expect(err).To(BeNil())
+		})
+
+		It("should allow for incrementing", func() {
+			err := user.IncrementLoginAttempts(db, "foo")
+			Expect(err).To(BeNil())
+
+			err = user.IncrementLoginAttempts(db, "bar@example.com")
+			Expect(err).To(BeNil())
+
+			value, err := user.GetLoginAttempts(db, "foo")
+			Expect(value).To(Equal(1))
+			Expect(err).To(BeNil())
+
+			value, err = user.GetLoginAttempts(db, "bar@example.com")
+			Expect(value).To(Equal(94))
+			Expect(err).To(BeNil())
+		})
+
+		It("should not allow for overflows on the smallint", func() {
+			_, err := db.Exec("UPDATE users SET login_attempts = 32767 WHERE username = $1", "foo")
+			Expect(err).To(BeNil())
+
+			err = user.IncrementLoginAttempts(db, "foo")
+			Expect(err).To(BeNil())
+
+			value, err := user.GetLoginAttempts(db, "foo")
+			Expect(value).To(Equal(32767))
+			Expect(err).To(BeNil())
+		})
+	})
+
+	Describe("ResetLoginAttempts", func() {
+		BeforeEach(func() {
+			_, err := db.Exec("UPDATE users SET login_attempts = 92 WHERE username = $1", "foo")
+			Expect(err).To(BeNil())
+			_, err = db.Exec("UPDATE users SET login_attempts = 93 WHERE email = $1", "bar@example.com")
+			Expect(err).To(BeNil())
+		})
+
+		AfterEach(func() {
+			_, err := db.Exec("UPDATE users SET login_attempts = 0 WHERE username = $1", "foo")
+			Expect(err).To(BeNil())
+			_, err = db.Exec("UPDATE users SET login_attempts = 0 WHERE email = $1", "bar@example.com")
+			Expect(err).To(BeNil())
+		})
+
+		It("should allow for resetting", func() {
+			err := user.ResetLoginAttempts(db, "foo")
+			Expect(err).To(BeNil())
+
+			err = user.ResetLoginAttempts(db, "bar@example.com")
+			Expect(err).To(BeNil())
+
+			value, err := user.GetLoginAttempts(db, "foo")
+			Expect(value).To(Equal(0))
+			Expect(err).To(BeNil())
+
+			value, err = user.GetLoginAttempts(db, "bar@example.com")
+			Expect(value).To(Equal(0))
+			Expect(err).To(BeNil())
 		})
 	})
 

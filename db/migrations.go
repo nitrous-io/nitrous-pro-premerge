@@ -414,5 +414,11 @@ func init() {
 				ALTER TABLE volumes ADD COLUMN system boolean DEFAULT false NOT NULL;
 			`,
 		},
+		{
+			Version: "330",
+			Up: `
+				ALTER TABLE users ADD COLUMN login_attempts smallint DEFAULT 0 NOT NULL ;
+			`,
+		},
 	}
 }

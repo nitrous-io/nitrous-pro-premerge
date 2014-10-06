@@ -2,6 +2,7 @@ package tokens
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/nitrous-io/nitrous/middleware"
 	"github.com/nitrous-io/nitrous/models/token"
@@ -15,6 +16,15 @@ var (
 	errLogin       = httperror.New(http.StatusBadRequest, "invalid_request", "username or email is required")
 	errPassword    = httperror.New(http.StatusBadRequest, "invalid_request", "password is required")
 	errInvalidCred = httperror.New(http.StatusBadRequest, "invalid_grant", "incorrect username or password")
+)
+
+var (
+	LoginAttemptsWaitTime = map[int]time.Duration{
+		3: time.Duration(0),
+		6: time.Second * 1,
+		9: time.Second * 3,
+	}
+	LoginAttemptsFinalWaitTime = time.Second * 5
 )
 
 func Post(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
@@ -32,6 +42,12 @@ func Post(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 		return errLogin
 	}
 
+	attemptCount, err := user.GetLoginAttempts(db, login)
+	if err != nil {
+		return err
+	}
+	sleepOnLoginAttempts(attemptCount)
+
 	if password == "" {
 		return errPassword
 	}
@@ -45,7 +61,14 @@ func Post(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if !bcrypt.Verify(u.EncryptedPassword, password) {
+		if err := user.IncrementLoginAttempts(db, login); err != nil {
+			return err
+		}
 		return errInvalidCred
+	}
+
+	if err := user.ResetLoginAttempts(db, login); err != nil {
+		return err
 	}
 
 	t := &token.Token{UserID: u.ID}
@@ -64,4 +87,21 @@ func Post(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 		"token_type":   "Bearer",
 	}
 	return nil
+}
+
+func sleepOnLoginAttempts(loginAttempts int) {
+	if loginAttempts == 0 {
+		return
+	}
+
+	sleepTime := LoginAttemptsFinalWaitTime
+	for attempt, waitTime := range LoginAttemptsWaitTime {
+		if loginAttempts < attempt {
+			if waitTime < sleepTime {
+				sleepTime = waitTime
+			}
+		}
+	}
+	time.Sleep(sleepTime)
+	return
 }
