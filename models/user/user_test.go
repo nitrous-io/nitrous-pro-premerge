@@ -429,67 +429,59 @@ var _ = Describe("models/user", func() {
 			Expect(err).To(BeNil())
 		})
 
-		Context("when hosts owned by user equal to max hosts", func() {
-			It("returns false", func() {
-				hs, err := CreateHostStack(db, &HostStack{U: u})
-				Expect(err).To(BeNil())
+		It("returns false, when owned hosts == max hosts", func() {
+			hs, err := CreateHostStack(db, &HostStack{U: u})
+			Expect(err).To(BeNil())
 
-				_, err = CreateHostStack(db, &HostStack{
-					U:  u,
-					R:  hs.R,
-					P:  hs.P,
-					PT: hs.PT,
-				})
-				Expect(err).To(BeNil())
-
-				// max hosts for the user is set to 2
-				// and user already has 2 hosts
-				b, err := u.CanCreateHosts(db)
-				Expect(err).To(BeNil())
-				Expect(b).To(BeFalse())
+			_, err = CreateHostStack(db, &HostStack{
+				U:  u,
+				R:  hs.R,
+				P:  hs.P,
+				PT: hs.PT,
 			})
+			Expect(err).To(BeNil())
+
+			// max hosts for the user is set to 2
+			// and user already has 2 hosts
+			b, err := u.CanCreateHosts(db)
+			Expect(err).To(BeNil())
+			Expect(b).To(BeFalse())
 		})
 
-		Context("when hosts owned by user is less than max hosts", func() {
-			It("returns true", func() {
-				_, err := CreateHostStack(db, &HostStack{U: u})
-				Expect(err).To(BeNil())
+		It("returns true, when owned hosts < max hosts", func() {
+			_, err := CreateHostStack(db, &HostStack{U: u})
+			Expect(err).To(BeNil())
 
-				b, err := u.CanCreateHosts(db)
-				Expect(err).To(BeNil())
-				Expect(b).To(BeTrue())
-			})
+			b, err := u.CanCreateHosts(db)
+			Expect(err).To(BeNil())
+			Expect(b).To(BeTrue())
 		})
 
-		Context("when user has no hosts", func() {
-			It("returns true", func() {
-				b, err := u.CanCreateHosts(db)
-				Expect(err).To(BeNil())
-				Expect(b).To(BeTrue())
-			})
+		It("returns true, when user has no hosts", func() {
+			b, err := u.CanCreateHosts(db)
+			Expect(err).To(BeNil())
+			Expect(b).To(BeTrue())
 		})
 
-		Context("when user has terminated hosts", func() {
-			It("ignores terminated hosts and returns true", func() {
-				hs, err := CreateHostStack(db, &HostStack{U: u})
-				Expect(err).To(BeNil())
-				err = hs.H.Delete(db)
-				Expect(err).To(BeNil())
+		It("ignores terminated hosts", func() {
+			hs, err := CreateHostStack(db, &HostStack{U: u})
+			Expect(err).To(BeNil())
+			err = hs.H.Delete(db)
+			Expect(err).To(BeNil())
 
-				hs2, err := CreateHostStack(db, &HostStack{
-					U:  u,
-					R:  hs.R,
-					P:  hs.P,
-					PT: hs.PT,
-				})
-				Expect(err).To(BeNil())
-				err = hs2.H.Delete(db)
-				Expect(err).To(BeNil())
-
-				b, err := u.CanCreateHosts(db)
-				Expect(err).To(BeNil())
-				Expect(b).To(BeTrue())
+			hs2, err := CreateHostStack(db, &HostStack{
+				U:  u,
+				R:  hs.R,
+				P:  hs.P,
+				PT: hs.PT,
 			})
+			Expect(err).To(BeNil())
+			err = hs2.H.Delete(db)
+			Expect(err).To(BeNil())
+
+			b, err := u.CanCreateHosts(db)
+			Expect(err).To(BeNil())
+			Expect(b).To(BeTrue())
 		})
 	})
 })
