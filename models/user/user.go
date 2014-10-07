@@ -157,7 +157,7 @@ func (u *User) CanCreateHosts(d db.QueryReceiver) (bool, error) {
 	err := d.QueryRowx(`SELECT (count(h.id) < coalesce(min(up.max_hosts), 0))
 		FROM users u
 		JOIN user_profiles up ON (up.user_id = u.id)
-		LEFT JOIN hosts h ON (h.user_id = u.id)
+		LEFT JOIN hosts h ON (h.user_id = u.id AND h.terminated_at IS NULL)
 		WHERE u.id = $1;`,
 		u.ID).Scan(&b)
 

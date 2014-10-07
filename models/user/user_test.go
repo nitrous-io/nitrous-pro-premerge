@@ -468,5 +468,28 @@ var _ = Describe("models/user", func() {
 				Expect(b).To(BeTrue())
 			})
 		})
+
+		Context("when user has terminated hosts", func() {
+			It("ignores terminated hosts and returns true", func() {
+				hs, err := CreateHostStack(db, &HostStack{U: u})
+				Expect(err).To(BeNil())
+				err = hs.H.Delete(db)
+				Expect(err).To(BeNil())
+
+				hs2, err := CreateHostStack(db, &HostStack{
+					U:  u,
+					R:  hs.R,
+					P:  hs.P,
+					PT: hs.PT,
+				})
+				Expect(err).To(BeNil())
+				err = hs2.H.Delete(db)
+				Expect(err).To(BeNil())
+
+				b, err := u.CanCreateHosts(db)
+				Expect(err).To(BeNil())
+				Expect(b).To(BeTrue())
+			})
+		})
 	})
 })
