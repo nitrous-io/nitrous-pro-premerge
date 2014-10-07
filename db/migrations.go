@@ -402,5 +402,12 @@ func init() {
 				);
 			`,
 		},
+		{
+			Version: "320",
+			Up: `
+				DROP INDEX index_containers_on_slug;
+				CREATE UNIQUE INDEX index_containers_on_user_id_and_slug ON containers USING btree (user_id, slug);
+			`,
+		},
 	}
 }
