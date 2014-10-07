@@ -209,14 +209,13 @@ func Stop(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Requ
 		return errHostStopInvalidState
 	}
 
-	publishContainersStopped(env, h)
-
 	if err := transition(env.DB, h,
 		host.StateStopping, host.StateStopped,
 		HostbuilderClient.Stop); err != nil {
 		return err
 	}
 
+	publishContainersStopped(env, h)
 	publishHostEvent(env, controllers.EventHostStopped, h)
 	serializeHost(env, h)
 	return nil
@@ -228,14 +227,13 @@ func Restart(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.R
 		return errHostRestartInvalidState
 	}
 
-	publishContainersStopped(env, h)
-
 	if err := transition(env.DB, h,
 		host.StateRestarting, host.StateRunning,
 		HostbuilderClient.Restart); err != nil {
 		return err
 	}
 
+	publishContainersStopped(env, h)
 	publishHostEvent(env, controllers.EventHostRestarted, h)
 	serializeHost(env, h)
 	return nil
