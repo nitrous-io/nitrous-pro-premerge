@@ -42,7 +42,7 @@ var (
 
 var (
 	validations = map[string]error{
-		"index_containers_on_slug": httperror.New(http.StatusBadRequest, "validation_failed", "slug is taken"),
+		"index_containers_on_user_id_and_slug": httperror.New(http.StatusBadRequest, "validation_failed", "slug is taken"),
 	}
 )
 
