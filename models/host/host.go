@@ -203,15 +203,15 @@ func (h *Host) Validate() error {
 	if h.Slug == "" {
 		return ErrSlugBlank
 	}
-	if !slugRe.MatchString(h.Slug) {
-		return ErrSlugInvalid
-	}
 	nameLen := len(h.Slug)
 	if nameLen < 2 {
 		return ErrSlugTooShort
 	}
 	if nameLen > 63 {
 		return ErrSlugTooLong
+	}
+	if !slugRe.MatchString(h.Slug) {
+		return ErrSlugInvalid
 	}
 	return nil
 }
