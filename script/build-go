@@ -1,9 +1,11 @@
 #!/bin/bash
 set -e
-BUILD_DIR=./build
 VERSION=${1:?"version is required"}
+BUILD_DIR=./build
 
-rm -f "$BUILD_DIR/nitrousd"
+for A in nitrousd dbseed; do
+        rm -f "$BUILD_DIR/$A"
+done
 mkdir -p "$BUILD_DIR"
 
 VERSION=$VERSION goop go install -x -ldflags "-X main.version ${VERSION}" -v ./...

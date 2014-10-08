@@ -5,73 +5,17 @@ APP=${1:?"app name is required"}
 VERSION=${2:?"version is required"}
 ARTIFACT_DIR=/tmp/$APP/$VERSION
 
-PACKAGE_NAME=$APP
-PACKAGE_COMPONENTS="nitrousd"
-PACKAGE_VERSION=$VERSION
-PACKAGE_ARCHITECTURE="$(dpkg-architecture -qDEB_HOST_ARCH)"
-PACKAGE_MAINTAINER="eng@nitrous.io"
-PACKAGE_DESCRIPTION="Nitrous.IO Web Application"
-PACKAGE_LICENSE="All Rights Reserved - Irrational Industries d/b/a Nitrous.IO"
-PACKAGE_URL="nitrous.io"
+# package
+PKGNAME=${APP}-${VERSION}.tgz
+BUCKET=nitrous-dedicated
+APPDIR=$APP
 
-FILES=./files/$PACKAGE_NAME
-PKGDIR=$ARTIFACT_DIR/pkg_skel
-
-mkdir -p $PKGDIR/opt/$APP
-
-# setup app base directory, and install compiled app components
-for C in $PACKAGE_COMPONENTS; do
-  install -m 0755 -D $ARTIFACT_DIR/$C $PKGDIR/opt/$APP/$C
-done
-
-cp -axr $ARTIFACT_DIR/public $PKGDIR/opt/$APP/public
-
-# install control files over to $PKDIR, for when directory context changes
-install -m 0644 -D $FILES/control/postinst $PKGDIR/$FILES/control/postinst
-install -m 0644 -D $FILES/control/prerm $PKGDIR/$FILES/control/prerm
-install -m 0644 -D $FILES/control/postrm $PKGDIR/$FILES/control/postrm
-
-# install nitrousd upstart config
-install -m 0644 -D $FILES/data/etc/init/nitrousd.conf $PKGDIR/etc/init/nitrousd.conf
-
-# install nitrousd env via /etc/default
-install -m 0644 -D $FILES/data/etc/default/nitrousd $PKGDIR/etc/default/nitrousd
-
-cd $PKGDIR
-rm -f *.deb
-
-fpm \
-  -s dir \
-  --name $PACKAGE_NAME \
-  --version $PACKAGE_VERSION \
-  --architecture "$PACKAGE_ARCHITECTURE" \
-  --prefix / \
-  --description "$PACKAGE_DESCRIPTION" \
-  --maintainer "$PACKAGE_MAINTAINER" \
-  --provides $PACKAGE_NAME \
-  --replaces $PACKAGE_NAME \
-  --after-install $FILES/control/postinst \
-  --before-remove $FILES/control/prerm \
-  --after-remove $FILES/control/postrm \
-  --config-files /etc/init/nitrousd.conf \
-  --config-files /etc/default/nitrousd \
-  --license "$PACKAGE_LICENSE" \
-  --url "$PACKAGE_URL" \
-  --deb-compression gz \
-  -t deb .
-
-# cleanup
-rm -rf $PKGDIR/{etc,opt,files}
-
-DEB=${APP}_${VERSION}_amd64.deb
-
-sysctl -p
-
-cd $PKGDIR
-if [[ -f $DEB ]]; then
-  echo "Adding $DEB to local repository"
-  deb-upload apt.nitrous.io $DEB public 6B19EAE0
+cd $ARTIFACT_DIR
+if [[ -f ${APP} ]] && [[ -f dbseed ]] && [[ -d public ]];  then
+        tar -zcf ${PKGNAME} ${APP} dbseed public
 else
-  echo "Failed to find deb package: $DEB in $ARTIFACT_DIR directory."
-  exit 1
+        exit 1
 fi
+
+s3cmd --access_key=$ACCESS_KEY --secret_key=$SECRET_KEY put ${ARTIFACT_DIR}/${PKGNAME} s3://${BUCKET}/${APPDIR}/$PKGNAME
+s3cmd --access_key=$ACCESS_KEY --secret_key=$SECRET_KEY put ${ARTIFACT_DIR}/${PKGNAME} s3://${BUCKET}/${APPDIR}/${APP}-latest.tgz
