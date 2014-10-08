@@ -49,6 +49,7 @@ var (
 var (
 	Create   = middleware.HostViaForm("host", requiresRunningHost(create))
 	Commit   = WithContainerAndHost(commit)
+	Config   = WithContainerAndHost(config)
 	Show     = WithContainerAndHost(show)
 	Start    = WithContainerAndHost(start)
 	Stop     = WithContainerAndHost(stop)
@@ -336,6 +337,26 @@ func commit(cn *container.Container, h *host.Host, env *middleware.Env, w http.R
 		"image":     sImg,
 		"container": serializers.SerializeContainer(cn),
 	}
+	return nil
+}
+
+func config(cn *container.Container, h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
+	cl, err := controllers.NewFreighterClient(env.DB, h)
+	if err != nil {
+		return err
+	}
+
+	cnrConfig, cnrHostConfig, imgConfig, err := cl.Config(cn.CID)
+	if err != nil {
+		return err
+	}
+	env.Status = http.StatusOK
+	env.Data = map[string]interface{}{
+		"config":       cnrConfig,
+		"host_config":  cnrHostConfig,
+		"image_config": imgConfig,
+	}
+
 	return nil
 }
 

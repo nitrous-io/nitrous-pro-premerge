@@ -71,6 +71,7 @@ func (s *Server) drawRoutes() {
 		s.routeJSON("/containers", mw.Auth(containers.Create), "POST")
 		s.routeJSON("/containers/{slug}", mw.Auth(containers.Show), "GET")
 		s.routeJSON("/containers/{slug}/commit", mw.Auth(containers.Commit), "POST")
+		s.routeJSON("/containers/{slug}/config", mw.Auth(containers.Config), "GET")
 		s.routeJSON("/containers/{slug}/start", mw.Auth(containers.Start), "POST")
 		s.routeJSON("/containers/{slug}/stop", mw.Auth(containers.Stop), "POST")
 		s.routeJSON("/containers/{slug}/restart", mw.Auth(containers.Restart), "POST")
