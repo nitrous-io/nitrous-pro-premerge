@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/nitrous-io/freighter/freighterclient"
 	"github.com/nitrous-io/nitrous-common/logger"
 	"github.com/nitrous-io/nitrous/controllers"
 	"github.com/nitrous-io/nitrous/controllers/hosts"
@@ -23,6 +24,7 @@ import (
 	"github.com/nitrous-io/nitrous/models/region"
 	"github.com/nitrous-io/nitrous/models/token"
 	"github.com/nitrous-io/nitrous/models/user"
+	"github.com/nitrous-io/nitrous/models/volume"
 	"github.com/nitrous-io/nitrous/pkg/hostbuilderclient"
 	"github.com/nitrous-io/nitrous/pkg/pubsub"
 	"github.com/nitrous-io/nitrous/serializers"
@@ -42,6 +44,8 @@ var _ = Describe("POST /api/v0/hosts", func() {
 		authTokenInputs AuthTokenInputs
 		params          *url.Values
 
+		mockClient *freighterclient.MockClient
+
 		u  *user.User
 		t  *token.Token
 		hs *HostStack
@@ -49,6 +53,10 @@ var _ = Describe("POST /api/v0/hosts", func() {
 
 	BeforeEach(func() {
 		var err error
+
+		mockClient = &freighterclient.MockClient{}
+		StubDefaultFreighterFn(mockClient)
+
 		db, err = TestDatabase("nitrous_test")
 		Expect(err).To(BeNil())
 		logger := &logger.Logger{Level: logger.LogLevelQuiet}
@@ -78,6 +86,7 @@ var _ = Describe("POST /api/v0/hosts", func() {
 		if db != nil {
 			db.Close()
 		}
+		UnstubFreighterFn()
 	})
 
 	BeforeEach(func() {
@@ -268,6 +277,43 @@ var _ = Describe("POST /api/v0/hosts", func() {
 			Expect(crt.HostID).To(Equal(hosts[0].ID))
 			Expect(crt.ServerCert).To(ContainSubstring("BEGIN CERTIFICATE"))
 			Expect(crt.ServerKey).To(ContainSubstring("BEGIN RSA PRIVATE KEY"))
+		})
+
+		It("creates a shared volume and publishes a volume created event", func() {
+			ch := svr.Events.Subscribe(u.Topic())
+			defer svr.Events.Unsubscribe(ch, u.Topic())
+
+			doRequest(params)
+
+			hosts, err := host.FindAllByUser(db, u)
+			Expect(err).To(BeNil())
+			Expect(hosts).To(HaveLen(1))
+			vol, err := volume.Find(db, hosts[0].ID, "shared")
+			Expect(err).To(BeNil())
+			Expect(vol).NotTo(BeNil())
+			Expect(vol.System).To(BeTrue())
+
+			evtCh := make(chan *controllers.Event)
+			go func() {
+				var evt *controllers.Event
+				for msg := range ch { // Ignore events we don't care about.
+					evt = msg.(*controllers.Event)
+					if evt.Name == controllers.EventVolumeCreated {
+						evtCh <- evt
+						break
+					}
+				}
+			}()
+
+			select {
+			case <-time.After(50 * time.Millisecond):
+				Fail("Timeout while getting shared volume created event")
+			case evt := <-evtCh:
+				Expect(evt.Name).To(Equal(controllers.EventVolumeCreated))
+				evtData, ok := evt.Data.(map[string]*serializers.Volume)
+				Expect(ok).To(BeTrue())
+				Expect(evtData["volume"]).To(Equal(serializers.SerializeVolume(vol)))
+			}
 		})
 
 		It("responds with the progress data and created host", func() {

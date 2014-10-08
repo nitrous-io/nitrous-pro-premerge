@@ -11,6 +11,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"github.com/nitrous-io/freighter/freighterclient"
 	"github.com/nitrous-io/nitrous-common/flusher"
 	"github.com/nitrous-io/nitrous/pkg/httperror"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/nitrous-io/nitrous/models/region"
 	"github.com/nitrous-io/nitrous/models/token"
 	"github.com/nitrous-io/nitrous/models/user"
+	"github.com/nitrous-io/nitrous/models/volume"
 	"github.com/nitrous-io/nitrous/pkg/hostbuilderclient"
 	"github.com/nitrous-io/nitrous/serializers"
 )
@@ -174,7 +176,8 @@ func (ctx *createContext) run(env *middleware.Env, writer io.Writer, async bool)
 		}
 
 		publishHostEvent(env, controllers.EventHostCreated, h)
-		return nil
+
+		return createSharedVolume(env, db, h)
 	}
 
 	if async {
@@ -353,4 +356,49 @@ func generateCerts(hostname string) (*cert.Cert, error) {
 		return nil, err
 	}
 	return cert.Generate(hostname, caInfo.X509Cert, caInfo.Key)
+}
+
+func createSharedVolume(env *middleware.Env, db *ndb.Database, h *host.Host) error {
+	cl, err := controllers.NewFreighterClient(db, h)
+	if err != nil {
+		return err
+	}
+
+	vol := &volume.Volume{
+		HostID: h.ID,
+		Slug:   "shared",
+		Name:   "Shared Volume",
+		System: true,
+	}
+
+	tx, err := db.Beginx()
+	if err != nil {
+		return err
+	}
+	if err := vol.Insert(tx); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	if _, err := cl.CreateVolume(vol.Slug); err != nil {
+		if e := vol.Delete(db); e != nil {
+			env.Logger.Errorf("Unable to delete volume %d that failed on freighter: %v", vol.ID, e)
+		}
+		if e, ok := err.(*freighterclient.InvalidParamError); ok {
+			return httperror.New(http.StatusBadRequest, "validation_failed", e.Msg)
+		}
+		return err
+	}
+
+	env.Events.Publish(
+		controllers.NewEvent(controllers.EventVolumeCreated, map[string]*serializers.Volume{
+			"volume": serializers.SerializeVolume(vol),
+		}),
+		env.User.Topic(),
+	)
+
+	return nil
 }
