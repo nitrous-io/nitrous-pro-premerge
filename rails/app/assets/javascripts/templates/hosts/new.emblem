@@ -3,15 +3,18 @@
 
 form submit='create'
   .card-body
+    .ui.flex.horizontal
+      .ui.input-group
+        label.field-label for='hosts-new-name'
+          | Name
+        = input type='text' id='hosts-new-name' name='name' classNameBindings='view.nameFieldInvalid:error' disabled=saving value=name
+
+      .ui.input-group
+        label.field-label for='hosts-new-slug'
+          | Unique Slug
+        = input type='text' id='hosts-new-slug' name='slug' classNameBindings='view.slugFieldInvalid:error' pattern=App.slug.inputPattern title=App.slug.inputTitle disabled=saving value=slug
+
     .ui.input-group
-      label.field-label for='hosts-new-name'
-        | Name
-      = input type='text' id='hosts-new-name' name='name' classNameBindings='view.nameFieldInvalid:error' disabled=saving value=name
-
-      label.field-label for='hosts-new-slug'
-        | Unique Slug
-      = input type='text' id='hosts-new-slug' name='slug' classNameBindings='view.slugFieldInvalid:error' pattern=App.slug.inputPattern title=App.slug.inputTitle disabled=saving value=slug
-
       label.field-label for='hosts-new-region'
         | Region
 
@@ -28,64 +31,64 @@ form submit='create'
     .ui.input-group
       label.field-label
         | Size
-    .size-selection
-      .size-list
-        ul.ui.list.item-1-line
-          each plan in App.plans
-            li.list-item class={saving:disabled}
-              .left-accessory
-                .ui.checkbox
-                  = input type='radio' name='size' id=plan.inputId disabled=saving value=plan.slug
-                  label
-              .lines
-                p
-                  label for=plan.inputId
-                    = plan.name
-              .lines.right
-                p
-                  | $&nbsp;
-                  = decimal plan.price 2
-                  | &nbsp;/&nbsp;mo.
+      .size-selection
+        .size-list
+          ul.ui.list.item-1-line
+            each plan in App.plans
+              li.list-item class={saving:disabled}
+                .left-accessory
+                  .ui.checkbox
+                    = input type='radio' name='size' id=plan.inputId disabled=saving value=plan.slug
+                    label
+                .lines
+                  p
+                    label for=plan.inputId
+                      = plan.name
+                .lines.right
+                  p
+                    | $&nbsp;
+                    = decimal plan.price 2
+                    | &nbsp;/&nbsp;mo.
 
-      .size-description
-        table.ui.table.horizontal
-          tr
-            th Max. Containers
-            td
-              = selectedPlan.maxContainers
+        .size-description
+          table.ui.table.horizontal
+            tr
+              th Max. Containers
+              td
+                = selectedPlan.maxContainers
 
-          tr
-            th Processor Cores
-            td
-              = selectedPlan.cpu
+            tr
+              th Processor Cores
+              td
+                = selectedPlan.cpu
 
-          tr
-            th Total Memory
-            td
-              = selectedPlan.memory
+            tr
+              th Total Memory
+              td
+                = selectedPlan.memory
 
-          tr
-            th Total SSD Storage
-            td
-              = selectedPlan.storage
+            tr
+              th Total SSD Storage
+              td
+                = selectedPlan.storage
 
-          tr
-            th Container Root Access
-            td
-              i.fa.fa-check
-                span Yes
+            tr
+              th Container Root Access
+              td
+                i.fa.fa-check
+                  span Yes
 
-          tr
-            th Vagrant Provider
-            td
-              i.fa.fa-check
-                span Yes
+            tr
+              th Vagrant Provider
+              td
+                i.fa.fa-check
+                  span Yes
 
-          tr
-            th Custom Domains
-            td
-              i.fa.fa-check
-                span Yes
+            tr
+              th Custom Domains
+              td
+                i.fa.fa-check
+                  span Yes
 
     p.see-terms
       | Please review the&nbsp;

@@ -9,6 +9,7 @@ form submit='create'
       .ui.select
         Ember.Select name='host' content=App.hosts optionValuePath='content.slug' optionLabelPath='content.nameAndSlug' disabled=saving value=selectedHostSlug
 
+    .ui.input-group
       label.field-label for='images-pull-repo'
         | Image Repository
       = input type='text' name='name' id='images-pull-repo' disabled=saving value=repo placeholder='registry/repo:tag' pattern=App.Image.repoInputPattern title=App.Image.repoInputTitle

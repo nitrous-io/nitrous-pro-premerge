@@ -8,6 +8,7 @@ form submit='create'
         | Name
       = input type='text' id='volumes-new-name' name='name' value=name disabled=saving
 
+    .ui.input-group
       label.field-label for='volumes-new-slug'
         | Unique Slug
       = input type='text' id='volumes-new-slug' name='slug' pattern=App.slug.inputPattern title=App.slug.inputTitle value=slug disabled=saving

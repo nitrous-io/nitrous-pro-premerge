@@ -19,6 +19,7 @@
             | Subject
           = input type='text' id='feedback-subject' value=subject required=true
 
+        .ui.input-group
           label.field-label for='feedback-message'
             | Message
           Ember.TextArea id='feedback-message' rows='10' value=message required=true

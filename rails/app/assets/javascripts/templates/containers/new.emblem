@@ -9,13 +9,16 @@ form submit='create target="view"'
       .ui.select
         Ember.Select name='host' content=App.hosts optionValuePath='content.slug' optionLabelPath='content.nameAndSlug' disabled=saving value=selectedHostSlug
 
-      label.field-label for='containers-new-name'
-        | Name
-      = input type='text' id='containers-new-name' name='name' classNameBindings='view.nameFieldInvalid:error' disabled=saving value=name
+    .ui.flex.horizontal
+      .ui.input-group
+        label.field-label for='containers-new-name'
+          | Name
+        = input type='text' id='containers-new-name' name='name' classNameBindings='view.nameFieldInvalid:error' disabled=saving value=name
 
-      label.field-label for='containers-new-slug'
-        | Unique Slug
-      = input type='text' id='containers-new-slug' name='slug' classNameBindings='view.slugFieldInvalid:error' pattern=App.slug.inputPattern title=App.slug.inputTitle disabled=saving value=slug
+      .ui.input-group
+        label.field-label for='containers-new-slug'
+          | Unique Slug
+        = input type='text' id='containers-new-slug' name='slug' classNameBindings='view.slugFieldInvalid:error' pattern=App.slug.inputPattern title=App.slug.inputTitle disabled=saving value=slug
 
   .card-body.bordered
     .ui.input-group

@@ -14,14 +14,17 @@ form submit='create'
           a.ui.btn.raised.default class={saving:disabled} id='docker-hub-btn' data-url='https://index.docker.io/v1/' href='#'
             | Docker Hub
 
+    .ui.input-group
       label.field-label for='registries-new-username'
         | Username
       = input type='text' id='registries-new-username' name='username' value=username disabled=saving
 
+    .ui.input-group
       label.field-label for='registries-new-email'
         | Email
       = input type='email' id='registries-new-email' name='email' value=email disabled=saving
 
+    .ui.input-group
       label.field-label for='registries-new-password'
         | Password
       = input type='password' id='registries-new-password' name='password' value=password disabled=saving

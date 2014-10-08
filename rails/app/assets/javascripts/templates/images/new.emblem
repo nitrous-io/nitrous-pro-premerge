@@ -9,10 +9,12 @@ form submit='create target="view"'
       .ui.select
         Ember.Select name='host' content=App.hosts optionValuePath='content.slug' optionLabelPath='content.nameAndSlug' disabled=saving value=selectedHostSlug
 
+    .ui.input-group
       label.field-label for='images-new-name'
         | Name
       = input type='text' name='name' id='images-new-name' disabled=saving value=name
 
+    .ui.input-group
       label.field-label for='images-new-slug'
         | Slug
       = input type='text' name='slug' id='images-new-slug' pattern=App.Image.inputPattern title=App.Image.inputTitle disabled=saving value=slug

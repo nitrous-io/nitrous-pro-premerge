@@ -10,6 +10,7 @@
           | Username or Email
         = input type='text' id='login-login' value=login
 
+      .ui.input-group
         label.field-label for='login-password'
           | Password
         = input type='password' id='login-password' value=password

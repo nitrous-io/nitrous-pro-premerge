@@ -10,22 +10,27 @@
           | Sign Up Code
         = input type='password' id='signup-code' classNameBindings='view.codeFieldInvalid:error' disabled=signingUp value=code
 
+      .ui.input-group
         label.field-label for='signup-name'
           | Name
         = input type='text' id='signup-name' classNameBindings='view.nameFieldInvalid:error' disabled=signingUp value=user.name
 
+      .ui.input-group
         label.field-label for='signup-username'
           | Username
         = input type='text' id='signup-username' classNameBindings='view.usernameFieldInvalid:error' disabled=signingUp value=user.username
 
+      .ui.input-group
         label.field-label for='signup-email'
           | Email
         = input type='email' id='signup-email' classNameBindings='view.emailFieldInvalid:error' disabled=signingUp value=user.email
 
+      .ui.input-group
         label.field-label for='signup-password'
           | Password
         = input type='password' id='signup-password' classNameBindings='view.passwordFieldInvalid:error' disabled=signingUp value=user.password
 
+      .ui.input-group
         label.field-label for='signup-confirmPassword'
           | Confirm your Password
         = input type='password' id='signup-confirmPassword' classNameBindings='view.passwordFieldInvalid:error' disabled=signingUp value=confirmPassword
