@@ -18,8 +18,9 @@ import (
 )
 
 var (
-	errSlugRequired = httperror.New(http.StatusBadRequest, "invalid_request", "slug is required")
-	errNotFound     = httperror.New(http.StatusNotFound, "not_found", "volume could not be found")
+	errSlugRequired             = httperror.New(http.StatusBadRequest, "invalid_request", "slug is required")
+	errNotFound                 = httperror.New(http.StatusNotFound, "not_found", "volume could not be found")
+	errCannotDeleteSystemVolume = httperror.New(http.StatusForbidden, "forbidden", "system volume cannot be deleted")
 )
 
 var (
@@ -102,12 +103,6 @@ func Create(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Re
 
 func Destroy(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 	db := env.DB
-
-	cl, err := controllers.NewFreighterClient(db, h)
-	if err != nil {
-		return err
-	}
-
 	slug := mux.Vars(r)["vslug"]
 
 	vol, err := getVolume(db, h.ID, slug)
@@ -115,13 +110,20 @@ func Destroy(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.R
 		return err
 	}
 
-	err = cl.RemoveVolume(slug)
+	if vol.System {
+		return errCannotDeleteSystemVolume
+	}
+
+	cl, err := controllers.NewFreighterClient(db, h)
 	if err != nil {
 		return err
 	}
 
-	err = vol.Delete(db)
-	if err != nil {
+	if err := cl.RemoveVolume(slug); err != nil {
+		return err
+	}
+
+	if err := vol.Delete(db); err != nil {
 		env.Logger.Errorf("Unable to delete volume %d that was destroyed on freighter: %v", vol.ID, err)
 		return err
 	}
