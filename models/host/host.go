@@ -15,13 +15,11 @@ import (
 	"github.com/nitrous-io/nitrous/pkg/securerandom"
 )
 
-var (
-	nameRe = regexp.MustCompile(`\A[a-z0-9][a-z0-9\-]*\z`)
-)
+var slugRe = regexp.MustCompile(`\A[a-z0-9][a-z0-9\-]*[a-z0-9]\z`)
 
 var (
 	ErrSlugBlank    = errors.New("slug can't be blank")
-	ErrSlugInvalid  = errors.New("slug is not valid, allowed characters: a-z, 0-9 and -")
+	ErrSlugInvalid  = errors.New("slug may only contain alphanumeric characters or dashes and cannot begin or end with a dash")
 	ErrSlugTooShort = errors.New("slug is too short (minimum is 2 characters)")
 	ErrSlugTooLong  = errors.New("slug is too long (maximum is 63 characters)")
 )
@@ -205,7 +203,7 @@ func (h *Host) Validate() error {
 	if h.Slug == "" {
 		return ErrSlugBlank
 	}
-	if !nameRe.MatchString(h.Slug) {
+	if !slugRe.MatchString(h.Slug) {
 		return ErrSlugInvalid
 	}
 	nameLen := len(h.Slug)

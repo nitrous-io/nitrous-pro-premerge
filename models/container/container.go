@@ -12,7 +12,7 @@ import (
 	"github.com/nitrous-io/nitrous/pkg/securerandom"
 )
 
-var nameRe = regexp.MustCompile(`\A[a-z0-9][a-z0-9\-]*[a-z0-9]\z`)
+var slugRe = regexp.MustCompile(`\A[a-z0-9][a-z0-9\-]*[a-z0-9]\z`)
 
 var (
 	ErrSlugBlank    = errors.New("slug can't be blank")
@@ -156,7 +156,7 @@ func (c *Container) Validate() error {
 	if nameLen > 255 {
 		return ErrSlugTooLong
 	}
-	if !nameRe.MatchString(c.Slug) {
+	if !slugRe.MatchString(c.Slug) {
 		return ErrSlugInvalid
 	}
 	if c.Image == "" {

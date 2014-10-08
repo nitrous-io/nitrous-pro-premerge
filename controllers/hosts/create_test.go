@@ -129,7 +129,7 @@ var _ = Describe("POST /api/v0/hosts", func() {
 
 		errType, errDesc := ErrorSlug(res.Body)
 		Expect(errType).To(Equal("invalid_request"))
-		Expect(errDesc).To(Equal("slug is not valid, allowed characters: a-z, 0-9 and -"))
+		Expect(errDesc).To(Equal("slug may only contain alphanumeric characters or dashes and cannot begin or end with a dash"))
 	})
 
 	It("responds with plan not found when a matching plan cannot be found for the specified size", func() {
