@@ -21,7 +21,7 @@ var (
 
 var (
 	ErrSlugBlank    = errors.New("slug can't be blank")
-	ErrSlugInvalid  = errors.New("slug is not valid")
+	ErrSlugInvalid  = errors.New("slug is not valid, allowed characters: a-z, 0-9 and -")
 	ErrSlugTooShort = errors.New("slug is too short (minimum is 2 characters)")
 	ErrSlugTooLong  = errors.New("slug is too long (maximum is 63 characters)")
 )

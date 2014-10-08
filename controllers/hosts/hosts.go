@@ -22,7 +22,6 @@ import (
 var (
 	errSizeRequired             = httperror.New(http.StatusBadRequest, "invalid_request", "size is required")
 	errSlugRequired             = httperror.New(http.StatusBadRequest, "invalid_request", "slug is required")
-	errSlugInvalid              = httperror.New(http.StatusBadRequest, "invalid_request", "slug is not valid")
 	errRegionRequired           = httperror.New(http.StatusBadRequest, "invalid_request", "region is required")
 	errPlanNotFound             = httperror.New(http.StatusBadRequest, "invalid_request", "no matching plan found for the given size")
 	errRegionNotFound           = httperror.New(http.StatusBadRequest, "invalid_request", "no matching region found for the given name")
