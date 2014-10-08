@@ -12,6 +12,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/nitrous-io/nitrous-common/flusher"
+	"github.com/nitrous-io/nitrous/pkg/httperror"
 
 	"github.com/nitrous-io/hostbuilder"
 	"github.com/nitrous-io/nitrous/controllers"
@@ -231,6 +232,10 @@ func newCreateContext(db *ndb.Database, user *user.User, size, regionSlug, slug,
 		MaxContainers:      sql.NullInt64{ctx.Plan.MaxContainers, true},
 		Size:               sql.NullString{ctx.Plan.Slug, true},
 		State:              host.StateBorn,
+	}
+
+	if err = ctx.Host.Validate(); err != nil {
+		return nil, httperror.New(http.StatusBadRequest, "invalid_request", err.Error())
 	}
 
 	// Save record to db first to reserve slug (since it's globally unique).

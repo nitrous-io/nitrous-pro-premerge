@@ -201,7 +201,7 @@ func (h *Host) Delete(d db.QueryReceiver) error {
 	return d.QueryRowx(`UPDATE hosts SET terminated_at = now(), state = $1 WHERE id = $2 RETURNING *;`, StateTerminated, h.ID).StructScan(h)
 }
 
-func (h *Host) Validate(db *db.Database) error {
+func (h *Host) Validate() error {
 	if h.Slug == "" {
 		return ErrSlugBlank
 	}

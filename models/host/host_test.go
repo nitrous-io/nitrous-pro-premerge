@@ -403,7 +403,7 @@ var _ = Describe("models/host", func() {
 				PlanID:             hs.P.ID,
 				ProviderTemplateID: hs.PT.ID,
 			}
-			Expect(h.Validate(db)).To(BeNil())
+			Expect(h.Validate()).To(BeNil())
 		})
 
 		It("validates name", func() {
@@ -427,12 +427,13 @@ var _ = Describe("models/host", func() {
 				{"f00", nil},
 				{"f-o-0-", nil},
 				{"-foo", host.ErrSlugInvalid},
+				{"foo_bar", host.ErrSlugInvalid},
 				{"FOO", host.ErrSlugInvalid},
 			}
 
 			for _, t := range tests {
 				h.Slug = t.input
-				Expect(h.Validate(db) == t.err).To(BeTrue(),
+				Expect(h.Validate() == t.err).To(BeTrue(),
 					"Expected '%s' to return error '%v'", t.input, t.err)
 			}
 		})

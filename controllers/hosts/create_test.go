@@ -121,6 +121,17 @@ var _ = Describe("POST /api/v0/hosts", func() {
 		})
 	}
 
+	It("responds with invalid slug when an invalid slug is specified", func() {
+		params.Set("slug", "foo_bar")
+		res := doRequest(params)
+
+		Expect(res.Code).To(Equal(http.StatusBadRequest))
+
+		errType, errDesc := ErrorSlug(res.Body)
+		Expect(errType).To(Equal("invalid_request"))
+		Expect(errDesc).To(Equal("slug is not valid"))
+	})
+
 	It("responds with plan not found when a matching plan cannot be found for the specified size", func() {
 		params.Set("size", "doubledouble")
 		res := doRequest(params)
