@@ -191,12 +191,12 @@ func baseImages(d db.QueryReceiver) error {
 		return err
 	}
 	baseImages := []baseimage.BaseImage{
-		{Name: "Go", Repo: "nitrousio/golang:latest", Description: ""},
-		{Name: "Node.js", Repo: "nitrousio/nodejs:latest", Description: ""},
-		{Name: "PHP", Repo: "nitrousio/php:latest", Description: ""},
-		{Name: "Python", Repo: "nitrousio/python:latest", Description: ""},
-		{Name: "Ruby", Repo: "nitrousio/ruby:latest", Description: ""},
-		{Name: "Ubuntu", Repo: "nitrousio/ubuntu:trusty", Description: ""},
+		{Name: "Go", Repo: "nitrousio/golang:latest", Description: "", Slug: "golang"},
+		{Name: "Node.js", Repo: "nitrousio/nodejs:latest", Description: "", Slug: "nodejs"},
+		{Name: "PHP", Repo: "nitrousio/php:latest", Description: "", Slug: "php"},
+		{Name: "Python", Repo: "nitrousio/python:latest", Description: "", Slug: "python"},
+		{Name: "Ruby", Repo: "nitrousio/ruby:latest", Description: "", Slug: "ruby"},
+		{Name: "Ubuntu", Repo: "nitrousio/ubuntu:trusty", Description: "", Slug: "ubuntu"},
 	}
 	for _, b := range baseImages {
 		err = b.Insert(d)

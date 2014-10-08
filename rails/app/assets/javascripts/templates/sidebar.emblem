@@ -15,17 +15,18 @@ ul.hosts
               = host.state
         ul.containers
           if host.isRunning
-            = each container in host.containers
-              li class={container.selected}
-                if container.isTerminated
-                  a.noclick href='#'
-                    h4
-                      = container.displayName
-                    .state-indicator.terminated title='terminated'
-                else
-                  link-to 'container.index' container.slug
-                    h4
-                      = container.displayName
-                    .state-indicator class={container.state} title={container.state}
-                      span
-                        = container.state
+            if host.containers.length
+              = each container in host.containers
+                li class={container.selected}
+                  if container.isTerminated
+                    a.noclick href='#'
+                      h4
+                        = container.displayName
+                      .state-indicator.terminated title='terminated'
+                  else
+                    link-to 'container.index' container.slug
+                      h4
+                        = container.displayName
+                      .state-indicator class={container.state} title={container.state}
+                        span
+                          = container.state

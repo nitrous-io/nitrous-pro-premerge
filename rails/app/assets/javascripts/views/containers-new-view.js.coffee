@@ -27,7 +27,6 @@ App.ContainersNewView = Em.View.extend
           repo = repo.replace /:?$/, ':latest'
         @set 'customImage', repo
         repo
-
   ).property 'selectedOption', 'selectedHostImage', 'selectedBaseImage', 'customImage', 'controller.hostImagesIsEmpty'
 
   baseImageOptionDisabled: (->
@@ -65,8 +64,9 @@ App.ContainersNewView = Em.View.extend
   ).observes 'controller.preselectHost'
 
   baseImagesDidChange: (->
-    Em.run.scheduleOnce 'afterRender', this, ->
-      @$('select[name=containers-new-option-base-image]')?.change()
+    return unless App.get('baseImages.length') > 0
+    unless @get 'selectedBaseImage'
+      @set 'selectedBaseImage', App.get('baseImages.firstObject.repo')
   ).observes 'App.baseImages.@each'
 
   hostImagesDidChange: (->
@@ -82,6 +82,9 @@ App.ContainersNewView = Em.View.extend
   didInsertElement: ->
     @_super()
     App.slug.slugify(@$('#containers-new-name'), @$('#containers-new-slug'))
+
+    if App.get('baseImages.length') > 0 && !@get('selectedBaseImage')
+      @set 'selectedBaseImage', App.get('baseImages.firstObject.repo')
 
     @$('input[name=option]').on('change.containers-new', (ev) =>
       if $(ev.target).is(':checked')

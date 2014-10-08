@@ -1,4 +1,5 @@
 @import 'variables'
+@import 'mixins'
 
 #containers-new-view
   .image-selection
@@ -40,3 +41,49 @@
     .port-bindings
       td:first-of-type
         width: 60px
+
+  .base-images
+    margin: 0 0 0 52px
+    padding: 0
+    list-style: none
+
+  .containers-new-base-image-view
+    display: inline-block
+    margin-right: 16px
+    border-radius: 3px
+    opacity: .4
+    border: 2px transparent
+    text-align: center
+    transition: opacity .1s, box-shadow .1s
+
+    label
+      font-weight: 500
+      font-size: $fontSizeSmall
+      text-transform: uppercase
+
+    .bg, .icon
+      background-size: 100px 100px
+      background-repeat: no-repeat
+      width: 100px
+      height: 100px
+
+    .bg
+      position: relative
+      margin-bottom: 4px
+
+    .icon
+      position: absolute
+      top: 0
+      left: 0
+
+    &.selected
+      opacity: 1
+
+      .bg
+        +light-shadow
+
+    &.disabled
+      opacity: 0.2
+
+      &.selected
+        opacity: 0.6

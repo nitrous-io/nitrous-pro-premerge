@@ -30,8 +30,9 @@ form submit='create target="view"'
               label
             label for='containers-new-option-base-image' Use Nitrous.IO Base Image
 
-        .ui.select.indent
-          Ember.Select class='option-input' name='containers-new-option-base-image' content=App.baseImages optionValuePath='content.repo' optionLabelPath='content.repo' value=view.selectedBaseImage disabled=view.baseImageOptionDisabled
+        ul.base-images
+          each baseImage in App.baseImages
+            App.ContainersNewBaseImageView baseImage=baseImage selectedBaseImage=view.selectedBaseImage disabled=view.baseImageOptionDisabled
 
         ul.ui.checkbox-group class={view.hostImageOptionDisabled:disabled}
           li
