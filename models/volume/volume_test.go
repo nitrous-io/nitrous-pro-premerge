@@ -61,12 +61,20 @@ var _ = Describe("models/volume", func() {
 	}
 
 	Describe("Insert()", func() {
-		It("sets name and ID", func() {
-			v := newVolume("docs")
+		It("persists the volume in the database", func() {
+			v := &volume.Volume{
+				HostID: hs.H.ID,
+				Slug:   "docs",
+				Name:   "documents",
+				System: true,
+			}
 			err := v.Insert(db)
 			Expect(err).To(BeNil())
 			Expect(v.ID).NotTo(BeZero())
-			Expect(v.Name).To(Equal("docs"))
+			Expect(v.HostID).To(Equal(hs.H.ID))
+			Expect(v.Slug).To(Equal("docs"))
+			Expect(v.Name).To(Equal("documents"))
+			Expect(v.System).To(Equal(true))
 			Expect(v.CreatedAt).NotTo(BeNil())
 			Expect(v.UpdatedAt).NotTo(BeNil())
 		})
