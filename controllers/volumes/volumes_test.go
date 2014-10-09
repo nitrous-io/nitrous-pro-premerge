@@ -326,6 +326,20 @@ var _ = Describe("controllers/volumes", func() {
 			})
 		})
 
+		Context("when volume is a system volume", func() {
+			BeforeEach(func() {
+				v := volume.Volume{HostID: hs.H.ID, Slug: "shared", System: true}
+				err := v.Insert(db)
+				Expect(err).To(BeNil())
+			})
+
+			It("returns 403 without destroying volume", func() {
+				doRequest("shared")
+				Expect(mockClient.RemoveVolumeCalled).To(Equal(0))
+				Expect(res.Code).To(Equal(http.StatusForbidden))
+			})
+		})
+
 		Context("when volume is not found", func() {
 			It("returns 404 without calling freighterclient", func() {
 				doRequest("nosuch")

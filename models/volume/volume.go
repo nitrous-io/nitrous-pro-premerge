@@ -15,6 +15,7 @@ type Volume struct {
 	HostID    int64      `db:"host_id"`
 	Name      string     `db:"name"`
 	Slug      string     `db:"slug"`
+	System    bool       `db:"system"`
 	CreatedAt *time.Time `db:"created_at"`
 	UpdatedAt *time.Time `db:"updated_at"`
 }
@@ -62,8 +63,8 @@ func (v *Volume) Insert(d db.QueryReceiver) error {
 		v.Name = v.Slug
 	}
 	nstmt, err := d.PrepareNamed(`INSERT INTO volumes
-		(host_id, slug, name) VALUES
-		(:host_id, :slug, :name)
+		(host_id, slug, name, system) VALUES
+		(:host_id, :slug, :name, :system)
 		RETURNING *;`)
 	if err != nil {
 		return err

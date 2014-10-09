@@ -408,5 +408,11 @@ func init() {
 				ALTER TABLE base_images ADD COLUMN slug character varying(255) DEFAULT '' NOT NULL;
 			`,
 		},
+		{
+			Version: "320",
+			Up: `
+				ALTER TABLE volumes ADD COLUMN system boolean DEFAULT false NOT NULL;
+			`,
+		},
 	}
 }

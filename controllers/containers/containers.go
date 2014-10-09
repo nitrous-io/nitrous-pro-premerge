@@ -190,20 +190,12 @@ func create(h runningHost, env *middleware.Env, w http.ResponseWriter, r *http.R
 	}
 
 	// Save record to db first to reserve name (since it's globally unique).
-	tx, err := db.Beginx()
-	if err != nil {
-		return err
-	}
-	if err := cn.Insert(tx); err != nil {
-		tx.Rollback()
+	if err := cn.Insert(db); err != nil {
 		if e, ok := err.(*pq.Error); ok && e.Code.Name() == "unique_violation" {
 			if validationErr, ok := validations[e.Constraint]; ok {
 				return validationErr
 			}
 		}
-		return err
-	}
-	if err := tx.Commit(); err != nil {
 		return err
 	}
 
