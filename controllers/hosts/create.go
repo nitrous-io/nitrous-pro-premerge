@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/nitrous-io/freighter/freighterclient"
 	"github.com/nitrous-io/nitrous-common/flusher"
@@ -162,16 +161,7 @@ func (ctx *createContext) run(env *middleware.Env, writer io.Writer, async bool)
 		h.FreighterdPort = sql.NullInt64{int64(info.FreighterdPort), true}
 		h.State = host.StateRunning
 
-		var tx *sqlx.Tx
-		tx, err = db.Beginx()
-		if err != nil {
-			return err
-		}
-		if err = h.Update(tx); err != nil {
-			tx.Rollback()
-			return err
-		}
-		if err = tx.Commit(); err != nil {
+		if err = h.Update(db); err != nil {
 			return err
 		}
 
@@ -371,15 +361,7 @@ func createSharedVolume(env *middleware.Env, db *ndb.Database, h *host.Host) err
 		System: true,
 	}
 
-	tx, err := db.Beginx()
-	if err != nil {
-		return err
-	}
-	if err := vol.Insert(tx); err != nil {
-		tx.Rollback()
-		return err
-	}
-	if err := tx.Commit(); err != nil {
+	if err := vol.Insert(db); err != nil {
 		return err
 	}
 

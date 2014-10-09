@@ -62,13 +62,7 @@ func Create(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Re
 		Name:   name,
 	}
 
-	tx, err := db.Beginx()
-	if err != nil {
-		return err
-	}
-	err = vol.Insert(tx)
-	if err != nil {
-		tx.Rollback()
+	if err := vol.Insert(db); err != nil {
 		if e, ok := err.(*pq.Error); ok && e.Code.Name() == "unique_violation" {
 			if validationErr, ok := validations[e.Constraint]; ok {
 				return validationErr
@@ -76,16 +70,10 @@ func Create(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Re
 		}
 		return err
 	}
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
 
-	_, err = cl.CreateVolume(slug)
-	if err != nil {
-		desErr := vol.Delete(db)
-		if desErr != nil {
-			env.Logger.Errorf("Unable to delete volume %d that failed on freighter: %v", vol.ID, desErr)
+	if _, err := cl.CreateVolume(slug); err != nil {
+		if e := vol.Delete(db); e != nil {
+			env.Logger.Errorf("Unable to delete volume %d that failed on freighter: %v", vol.ID, e)
 		}
 		if e, ok := err.(*freighterclient.InvalidParamError); ok {
 			return httperror.New(http.StatusBadRequest, "validation_failed", e.Msg)
