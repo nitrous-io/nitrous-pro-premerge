@@ -30,7 +30,7 @@ App.EventsSocket = Lib.Socket.extend
         containerData = data.container
         findContainer(containerData)?.load(containerData)
 
-    ['host.created', 'host.destroyed'].forEach (evt) =>
+    ['host.created', 'host.create_failed', 'host.destroyed'].forEach (evt) =>
       @on evt, (data) ->
         findAllHosts()?.reload()
 
@@ -39,14 +39,12 @@ App.EventsSocket = Lib.Socket.extend
       if progress = parseProgress(data)
         host.set 'progress', progress
 
-    @on 'host.create_failed', (data) ->
-      findHostBySlug(data)?.set 'progress', null
-
-    @on 'host.created', (data) =>
-      hostData = data.host
-      return unless host = findHostBySlug(hostData)
-      host.load(hostData)
-      host.set 'progress', null
+    ['host.create_failed', 'host.created'].forEach (evt) =>
+      @on evt, (data) =>
+        hostData = data.host
+        return unless host = findHostBySlug(hostData)
+        host.load(hostData)
+        host.set 'progress', null
 
     ['host.started', 'host.stopped', 'host.restarted', 'host.updated',
       'host.starting', 'host.stopping', 'host.restarting'].forEach (evt) =>
