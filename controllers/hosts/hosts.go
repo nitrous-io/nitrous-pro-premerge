@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/nitrous-io/nitrous/controllers"
-	ndb "github.com/nitrous-io/nitrous/db"
 	"github.com/nitrous-io/nitrous/middleware"
 	"github.com/nitrous-io/nitrous/models/cert"
 	"github.com/nitrous-io/nitrous/models/container"
@@ -192,9 +191,31 @@ func Start(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Req
 	if h.State != host.StateStopped {
 		return errHostStartInvalidState
 	}
-	if err := transition(env.DB, h,
-		host.StateStarting, host.StateRunning,
-		HostbuilderClient.Start); err != nil {
+
+	db := env.DB
+
+	h.State = host.StateStarting
+	if err := h.Update(db); err != nil {
+		return err
+	}
+	publishHostEvent(env, controllers.EventHostStarting, h)
+
+	info, err := HostbuilderClient.Start(h.Provider, &hostbuilderclient.Config{"id": h.ProviderIdentifier.String})
+	if err != nil {
+		// Rollback to previous state.
+		h.State = host.StateStopped
+		if err := h.Update(db); err != nil { // Log and continue, don't mask hostbuilder error.
+			env.Logger.Errorf("hosts.Start: Unable to reset host state: %v", err)
+		}
+		publishHostEvent(env, controllers.EventHostUpdated, h)
+		return err
+	}
+
+	h.State = host.StateRunning
+	h.IPAddress = sql.NullString{info.IPAddress, true}
+	h.FreighterdPort = sql.NullInt64{int64(info.FreighterdPort), true}
+
+	if err := h.Update(db); err != nil {
 		return err
 	}
 
@@ -209,9 +230,31 @@ func Stop(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Requ
 		return errHostStopInvalidState
 	}
 
-	if err := transition(env.DB, h,
-		host.StateStopping, host.StateStopped,
-		HostbuilderClient.Stop); err != nil {
+	db := env.DB
+	origState := h.State
+
+	h.State = host.StateStopping
+	if err := h.Update(db); err != nil {
+		return err
+	}
+	publishHostEvent(env, controllers.EventHostStopping, h)
+
+	info, err := HostbuilderClient.Stop(h.Provider, &hostbuilderclient.Config{"id": h.ProviderIdentifier.String})
+	if err != nil {
+		// Rollback to previous state.
+		h.State = origState
+		if err := h.Update(db); err != nil { // Log and continue, don't mask hostbuilder error.
+			env.Logger.Errorf("hosts.Stop: Unable to reset host state: %v", err)
+		}
+		publishHostEvent(env, controllers.EventHostUpdated, h)
+		return err
+	}
+
+	h.State = host.StateStopped
+	h.IPAddress = sql.NullString{info.IPAddress, true}
+	h.FreighterdPort = sql.NullInt64{int64(info.FreighterdPort), true}
+
+	if err := h.Update(db); err != nil {
 		return err
 	}
 
@@ -227,37 +270,37 @@ func Restart(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.R
 		return errHostRestartInvalidState
 	}
 
-	if err := transition(env.DB, h,
-		host.StateRestarting, host.StateRunning,
-		HostbuilderClient.Restart); err != nil {
+	db := env.DB
+	origState := h.State
+
+	h.State = host.StateRestarting
+	if err := h.Update(db); err != nil {
+		return err
+	}
+	publishHostEvent(env, controllers.EventHostRestarting, h)
+
+	info, err := HostbuilderClient.Restart(h.Provider, &hostbuilderclient.Config{"id": h.ProviderIdentifier.String})
+	if err != nil {
+		// Rollback to previous state.
+		h.State = origState
+		if err := h.Update(db); err != nil { // Log and continue, don't mask hostbuilder error.
+			env.Logger.Errorf("hosts.Restart: Unable to reset host state: %v", err)
+		}
+		publishHostEvent(env, controllers.EventHostUpdated, h)
+		return err
+	}
+
+	h.State = host.StateRunning
+	h.IPAddress = sql.NullString{info.IPAddress, true}
+	h.FreighterdPort = sql.NullInt64{int64(info.FreighterdPort), true}
+
+	if err := h.Update(db); err != nil {
 		return err
 	}
 
 	publishContainersStopped(env, h)
 	publishHostEvent(env, controllers.EventHostRestarted, h)
 	serializeHost(env, h)
-	return nil
-}
-
-func transition(d ndb.QueryReceiver, h *host.Host, midState, endState string, fn hostbuilderclient.OperationFn) error {
-	h.State = midState
-	if err := h.Update(d); err != nil {
-		return err
-	}
-
-	info, err := fn(h.Provider, &hostbuilderclient.Config{"id": h.ProviderIdentifier.String})
-	if err != nil {
-		return err
-	}
-
-	h.State = endState
-	h.IPAddress = sql.NullString{info.IPAddress, true}
-	h.FreighterdPort = sql.NullInt64{int64(info.FreighterdPort), true}
-
-	if err := h.Update(d); err != nil {
-		return err
-	}
-
 	return nil
 }
 

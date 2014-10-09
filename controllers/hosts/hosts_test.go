@@ -22,6 +22,7 @@ import (
 	"github.com/nitrous-io/nitrous/controllers/hosts"
 	"github.com/nitrous-io/nitrous/db"
 	"github.com/nitrous-io/nitrous/pkg/hostbuilderclient"
+	"github.com/nitrous-io/nitrous/pkg/pubsub"
 	"github.com/nitrous-io/nitrous/serializers"
 	"github.com/nitrous-io/nitrous/server"
 
@@ -346,7 +347,7 @@ var _ = Describe("controllers/hosts", func() {
 			})
 		})
 
-		It("publishes a host updated event with the updated host", func(done Done) {
+		It("publishes a host updated event with the updated host", func() {
 			ch := svr.Events.Subscribe(u.Topic())
 			defer svr.Events.Unsubscribe(ch, u.Topic())
 
@@ -354,16 +355,20 @@ var _ = Describe("controllers/hosts", func() {
 			params.Set("name", "GhostHost")
 			doRequest(params)
 
-			updated, err := host.FindByID(db, hs.H.ID)
-			Expect(err).To(BeNil())
-			Expect(<-ch).To(Equal(&controllers.Event{
-				Name: controllers.EventHostUpdated,
-				Data: map[string]*serializers.Host{
-					"host": serializers.SerializeHost(updated),
-				},
-			}))
-			close(done)
-		}, 3) // add longer timeout to allow goroutine to finish
+			select {
+			case <-time.After(50 * time.Millisecond):
+				Fail("Timed out waiting for host updated event")
+			case msg := <-ch:
+				updated, err := host.FindByID(db, hs.H.ID)
+				Expect(err).To(BeNil())
+				Expect(msg).To(Equal(&controllers.Event{
+					Name: controllers.EventHostUpdated,
+					Data: map[string]*serializers.Host{
+						"host": serializers.SerializeHost(updated),
+					},
+				}))
+			}
+		})
 	})
 
 	Describe("GET /api/v0/hosts/{slug}/stats", func() {
@@ -595,22 +600,26 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(j.Host.TerminatedAt).NotTo(BeNil())
 			})
 
-			It("publishes a host destroyed event with the destroyed host", func(done Done) {
+			It("publishes a host destroyed event with the destroyed host", func() {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
 
 				doRequest(hs.H.Slug)
 
-				deleted, err := host.FindByID(db, hs.H.ID)
-				Expect(err).To(BeNil())
-				Expect(<-ch).To(Equal(&controllers.Event{
-					Name: controllers.EventHostDestroyed,
-					Data: map[string]*serializers.Host{
-						"host": serializers.SerializeHost(deleted),
-					},
-				}))
-				close(done)
-			}, 3) // add longer timeout to allow goroutine to finish
+				select {
+				case <-time.After(50 * time.Millisecond):
+					Fail("Timed out waiting for host destroyed event")
+				case msg := <-ch:
+					deleted, err := host.FindByID(db, hs.H.ID)
+					Expect(err).To(BeNil())
+					Expect(msg).To(Equal(&controllers.Event{
+						Name: controllers.EventHostDestroyed,
+						Data: map[string]*serializers.Host{
+							"host": serializers.SerializeHost(deleted),
+						},
+					}))
+				}
+			})
 		})
 
 		Context("when hostbuilder fails to delete the host", func() {
@@ -750,22 +759,41 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(j.Host.TerminatedAt).To(BeNil())
 			})
 
-			It("publishes a host started event with the host", func(done Done) {
+			It("publishes host starting and started events", func() {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
 
 				doRequest(hs.H.Slug)
 
-				h, err := host.Find(db, hs.U, hs.H.Slug)
-				Expect(err).To(BeNil())
-				Expect(<-ch).To(Equal(&controllers.Event{
-					Name: controllers.EventHostStarted,
-					Data: map[string]*serializers.Host{
-						"host": serializers.SerializeHost(h),
-					},
-				}))
-				close(done)
-			}, 3) // add longer timeout to allow goroutine to finish
+				msgs := []pubsub.Message{}
+				finished := make(chan struct{})
+				go func() {
+					msgs = append(msgs, <-ch, <-ch)
+					close(finished)
+				}()
+
+				select {
+				case <-time.After(100 * time.Millisecond):
+					Fail("Timed out while waiting for events")
+				case <-finished:
+					evt, ok := msgs[0].(*controllers.Event)
+					Expect(ok).To(BeTrue())
+					Expect(evt.Name).To(Equal(controllers.EventHostStarting))
+					evtData, ok := evt.Data.(map[string]*serializers.Host)
+					Expect(ok).To(BeTrue())
+					Expect(evtData["host"].Slug).To(Equal(hs.H.Slug))
+					Expect(evtData["host"].State).To(Equal(host.StateStarting))
+
+					h, err := host.Find(db, hs.U, hs.H.Slug)
+					Expect(err).To(BeNil())
+					Expect(msgs[1]).To(Equal(&controllers.Event{
+						Name: controllers.EventHostStarted,
+						Data: map[string]*serializers.Host{
+							"host": serializers.SerializeHost(h),
+						},
+					}))
+				}
+			})
 		})
 
 		Context("when hostbuilder fails to start the host", func() {
@@ -783,10 +811,10 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(res.Code).To(Equal(http.StatusInternalServerError))
 			})
 
-			It("leaves host in intermediate state", func() {
+			It("resets the host to its original state", func() {
 				h, err := host.Find(db, hs.U, hs.H.Slug)
 				Expect(err).To(BeNil())
-				Expect(h.State).To(Equal(host.StateStarting))
+				Expect(h.State).To(Equal(host.StateStopped))
 			})
 		})
 
@@ -908,22 +936,41 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(j.Host.TerminatedAt).To(BeNil())
 			})
 
-			It("publishes a host stopped event with the host", func(done Done) {
+			It("publishes host stopping and stopped events", func() {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
 
 				doRequest(hs.H.Slug, nil)
 
-				h, err := host.Find(db, hs.U, hs.H.Slug)
-				Expect(err).To(BeNil())
-				Expect(<-ch).To(Equal(&controllers.Event{
-					Name: controllers.EventHostStopped,
-					Data: map[string]*serializers.Host{
-						"host": serializers.SerializeHost(h),
-					},
-				}))
-				close(done)
-			}, 3) // add longer timeout to allow goroutine to finish
+				msgs := []pubsub.Message{}
+				finished := make(chan struct{})
+				go func() {
+					msgs = append(msgs, <-ch, <-ch)
+					close(finished)
+				}()
+
+				select {
+				case <-time.After(100 * time.Millisecond):
+					Fail("Timed out while waiting for events")
+				case <-finished:
+					evt, ok := msgs[0].(*controllers.Event)
+					Expect(ok).To(BeTrue())
+					Expect(evt.Name).To(Equal(controllers.EventHostStopping))
+					evtData, ok := evt.Data.(map[string]*serializers.Host)
+					Expect(ok).To(BeTrue())
+					Expect(evtData["host"].Slug).To(Equal(hs.H.Slug))
+					Expect(evtData["host"].State).To(Equal(host.StateStopping))
+
+					h, err := host.Find(db, hs.U, hs.H.Slug)
+					Expect(err).To(BeNil())
+					Expect(msgs[1]).To(Equal(&controllers.Event{
+						Name: controllers.EventHostStopped,
+						Data: map[string]*serializers.Host{
+							"host": serializers.SerializeHost(h),
+						},
+					}))
+				}
+			})
 		})
 
 		Context("when hostbuilder fails to stop the host", func() {
@@ -943,10 +990,10 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(res.Code).To(Equal(http.StatusInternalServerError))
 			})
 
-			It("leaves host in intermediate state", func() {
+			It("resets the host to its original state", func() {
 				h, err := host.Find(db, hs.U, hs.H.Slug)
 				Expect(err).To(BeNil())
-				Expect(h.State).To(Equal(host.StateStopping))
+				Expect(h.State).To(Equal(host.StateRunning))
 			})
 		})
 
@@ -983,9 +1030,7 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(err).To(BeNil())
 			})
 
-			checkStoppedMsg := func(msg interface{}, slug string) {
-				evt, ok := msg.(*controllers.Event)
-				Expect(ok).To(BeTrue())
+			checkStoppedEvent := func(evt *controllers.Event, slug string) {
 				Expect(evt.Name).To(Equal(controllers.EventContainerStopped))
 				evtData, ok := evt.Data.(map[string]*serializers.Container)
 				Expect(ok).To(BeTrue())
@@ -993,7 +1038,7 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(evtData["container"].State).To(Equal(container.StateStopped.String()))
 			}
 
-			It("publishes container stopped events", func(done Done) {
+			It("publishes container stopped events", func() {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
 
@@ -1002,12 +1047,28 @@ var _ = Describe("controllers/hosts", func() {
 
 				doRequest(hs.H.Slug, nil)
 
-				msg := <-ch
-				checkStoppedMsg(msg, c1.Slug)
-				msg = <-ch
-				checkStoppedMsg(msg, c2.Slug)
+				// Collect the 2 expected container stop events.
+				stopEvents := []*controllers.Event{}
+				finished := make(chan struct{})
+				go func() {
+					for msg := range ch {
+						if e := msg.(*controllers.Event); e.Name == controllers.EventContainerStopped {
+							stopEvents = append(stopEvents, e)
+						}
+						if len(stopEvents) == 2 {
+							close(finished)
+							break
+						}
+					}
+				}()
 
-				close(done)
+				select {
+				case <-time.After(50 * time.Millisecond):
+					Fail("Timed out waiting for container stopped events")
+				case <-finished:
+					checkStoppedEvent(stopEvents[0], c1.Slug)
+					checkStoppedEvent(stopEvents[1], c2.Slug)
+				}
 			})
 		})
 
@@ -1130,22 +1191,41 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(j.Host.TerminatedAt).To(BeNil())
 			})
 
-			It("publishes a host restarted event with the host", func(done Done) {
+			It("publishes host restarting and restarted events", func() {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
 
 				doRequest(hs.H.Slug, nil)
 
-				h, err := host.Find(db, hs.U, hs.H.Slug)
-				Expect(err).To(BeNil())
-				Expect(<-ch).To(Equal(&controllers.Event{
-					Name: controllers.EventHostRestarted,
-					Data: map[string]*serializers.Host{
-						"host": serializers.SerializeHost(h),
-					},
-				}))
-				close(done)
-			}, 3) // increase timeout to allow goroutine to finish
+				msgs := []pubsub.Message{}
+				finished := make(chan struct{})
+				go func() {
+					msgs = append(msgs, <-ch, <-ch)
+					close(finished)
+				}()
+
+				select {
+				case <-time.After(100 * time.Millisecond):
+					Fail("Timed out while waiting for events")
+				case <-finished:
+					evt, ok := msgs[0].(*controllers.Event)
+					Expect(ok).To(BeTrue())
+					Expect(evt.Name).To(Equal(controllers.EventHostRestarting))
+					evtData, ok := evt.Data.(map[string]*serializers.Host)
+					Expect(ok).To(BeTrue())
+					Expect(evtData["host"].Slug).To(Equal(hs.H.Slug))
+					Expect(evtData["host"].State).To(Equal(host.StateRestarting))
+
+					h, err := host.Find(db, hs.U, hs.H.Slug)
+					Expect(err).To(BeNil())
+					Expect(msgs[1]).To(Equal(&controllers.Event{
+						Name: controllers.EventHostRestarted,
+						Data: map[string]*serializers.Host{
+							"host": serializers.SerializeHost(h),
+						},
+					}))
+				}
+			})
 		})
 
 		Context("when hostbuilder fails to restart the host", func() {
@@ -1165,10 +1245,10 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(res.Code).To(Equal(http.StatusInternalServerError))
 			})
 
-			It("leaves host in intermediate state", func() {
+			It("resets the host to its original state", func() {
 				h, err := host.Find(db, hs.U, hs.H.Slug)
 				Expect(err).To(BeNil())
-				Expect(h.State).To(Equal(host.StateRestarting))
+				Expect(h.State).To(Equal(host.StateRunning))
 			})
 		})
 
@@ -1205,9 +1285,7 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(err).To(BeNil())
 			})
 
-			checkStoppedMsg := func(msg interface{}, slug string) {
-				evt, ok := msg.(*controllers.Event)
-				Expect(ok).To(BeTrue())
+			checkStoppedEvent := func(evt *controllers.Event, slug string) {
 				Expect(evt.Name).To(Equal(controllers.EventContainerStopped))
 				evtData, ok := evt.Data.(map[string]*serializers.Container)
 				Expect(ok).To(BeTrue())
@@ -1215,7 +1293,7 @@ var _ = Describe("controllers/hosts", func() {
 				Expect(evtData["container"].State).To(Equal(container.StateStopped.String()))
 			}
 
-			It("publishes container stopped events", func(done Done) {
+			It("publishes container stopped events", func() {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
 
@@ -1224,12 +1302,28 @@ var _ = Describe("controllers/hosts", func() {
 
 				doRequest(hs.H.Slug, nil)
 
-				msg := <-ch
-				checkStoppedMsg(msg, c1.Slug)
-				msg = <-ch
-				checkStoppedMsg(msg, c2.Slug)
+				// Collect the 2 expected container stop events.
+				stopEvents := []*controllers.Event{}
+				finished := make(chan struct{})
+				go func() {
+					for msg := range ch {
+						if e := msg.(*controllers.Event); e.Name == controllers.EventContainerStopped {
+							stopEvents = append(stopEvents, e)
+						}
+						if len(stopEvents) == 2 {
+							close(finished)
+							break
+						}
+					}
+				}()
 
-				close(done)
+				select {
+				case <-time.After(50 * time.Millisecond):
+					Fail("Timed out waiting for container stopped events")
+				case <-finished:
+					checkStoppedEvent(stopEvents[0], c1.Slug)
+					checkStoppedEvent(stopEvents[1], c2.Slug)
+				}
 			})
 		})
 

@@ -80,7 +80,7 @@ App.ContainersNewController = Em.Controller.extend
     if errMsg = jqxhr.responseJSON?.error_description
       @set 'error', errMsg
       @set 'invalidField', errMsg.match(/^\w+/)[0]
-    App.postError(jqxhr.responseJSON, 'Failed to create conatiner!')
+    App.postError(jqxhr.responseJSON, 'Failed to create container!')
     @set 'saving', false
 
   actions:
