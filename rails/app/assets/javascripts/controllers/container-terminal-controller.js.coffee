@@ -41,4 +41,5 @@ App.ContainerTerminalController = Em.ObjectController.extend
 
 getLoginCommand = (username) ->
   username ||= "action"
-  "/usr/bin/script -q -c '/bin/login -f #{username} -p TERM=xterm-256color' /dev/null || /bin/login -f #{username} -p TERM=xterm-256color"
+  loginCmd = "/bin/login -f #{username} -p TERM=xterm-256color"
+  "script -q -c '#{loginCmd}' /dev/null || #{loginCmd}"
