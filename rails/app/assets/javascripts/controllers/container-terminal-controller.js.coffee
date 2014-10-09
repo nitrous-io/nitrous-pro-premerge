@@ -40,6 +40,6 @@ App.ContainerTerminalController = Em.ObjectController.extend
       App.postError(jqxhr.responseJSON, 'Could not connect to shell, retrying...')
 
 getLoginCommand = (username) ->
-  username ||= "action"
+  username ||= "root"
   loginCmd = "/bin/login -f #{username} -p TERM=xterm-256color"
   "script -q -c '#{loginCmd}' /dev/null || #{loginCmd}"
