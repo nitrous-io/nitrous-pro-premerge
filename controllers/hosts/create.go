@@ -146,7 +146,13 @@ func (ctx *createContext) run(env *middleware.Env, writer io.Writer, async bool)
 			if err != nil {
 				h.State = host.StateOrphan
 				_ = h.Update(db) // Ignore error here.
-				publishHostEvent(env, controllers.EventHostCreateFailed, h)
+				env.Events.Publish(
+					controllers.NewEvent(controllers.EventHostCreateFailed, map[string]interface{}{
+						"host":  serializers.SerializeHost(h),
+						"error": err.Error(),
+					}),
+					env.User.Topic(),
+				)
 			}
 		}()
 

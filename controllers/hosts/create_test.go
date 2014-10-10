@@ -596,7 +596,7 @@ var _ = Describe("POST /api/v0/hosts", func() {
 			BeforeEach(func() {
 				hb := hostbuilderclient.NewHostbuilder("www.example.com")
 				replaceTransport(hb, &FakeRoundTripper{
-					message: errorResponse,
+					message: `{"error":"some error occurred"}`,
 					status:  http.StatusBadRequest,
 				})
 
@@ -612,7 +612,7 @@ var _ = Describe("POST /api/v0/hosts", func() {
 				}).Should(Equal(host.StateOrphan))
 			})
 
-			It("publishes a host create failed event with the host record", func() {
+			It("publishes a host create failed event with the host record and error", func() {
 				ch := svr.Events.Subscribe(u.Topic())
 				defer svr.Events.Unsubscribe(ch, u.Topic())
 
@@ -633,15 +633,16 @@ var _ = Describe("POST /api/v0/hosts", func() {
 					Expect(msgs[0]).To(Equal(&controllers.Event{
 						Name: controllers.EventHostCreating,
 						Data: &controllers.ProgressEvent{ID: h.ID, Slug: h.Slug,
-							Progress: errorResponse},
-					}), "unexpected event, wanted EventHostCreating")
+							Progress: `{"error":"some error occurred"}`},
+					}))
 
-					Expect(msgs[1]).To(Equal(&controllers.Event{
-						Name: controllers.EventHostCreateFailed,
-						Data: map[string]*serializers.Host{
-							"host": serializers.SerializeHost(h),
-						},
-					}), "unexpected event, wanted EventHostCreated")
+					evt, ok := msgs[1].(*controllers.Event)
+					Expect(ok).To(BeTrue())
+					Expect(evt.Name).To(Equal(controllers.EventHostCreateFailed))
+					evtData, ok := evt.Data.(map[string]interface{})
+					Expect(ok).To(BeTrue())
+					Expect(evtData["host"]).To(Equal(serializers.SerializeHost(h)))
+					Expect(evtData["error"]).To(ContainSubstring("some error occurred"))
 				case <-time.After(100 * time.Millisecond):
 					Fail("timeout while waiting for EventHostCreateFailed")
 				}

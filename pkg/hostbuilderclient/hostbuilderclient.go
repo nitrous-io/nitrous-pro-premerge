@@ -125,7 +125,7 @@ func (hb *Hostbuilder) Create(provider string, config *Config, out io.Writer) (*
 			return nil, fmt.Errorf("hostbuilder: failed to decode stream: %s", err)
 		}
 		if msg.Error != "" {
-			return nil, fmt.Errorf("hostbuilder: create failed with error %s", err)
+			return nil, fmt.Errorf("hostbuilder: create failed with error: %s", msg.Error)
 		}
 
 		if msg.ID != "" {
