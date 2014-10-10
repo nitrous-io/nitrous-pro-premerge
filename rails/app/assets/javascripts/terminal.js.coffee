@@ -61,10 +61,13 @@ window.NitrousTerminal =
     @conn.retry()
 
   destroy: ->
-    @term?.write('c|goodbye')
-    @term?.removeAllListeners('resize')
-    @term?.handler = null
+    @close()
     @term?.destroy()
+
+  close: ->
+    @term?.write("\r\n[Session closed]")
+    @term?.removeAllListeners('resize')
+    @term?.handler = ->
     @conn?.close()
     @willOpen = null
 
@@ -82,8 +85,12 @@ window.NitrousTerminal =
       @term.write '\r\n'
 
   didReceiveMessage: (ev) ->
-    if ev.data.slice(0, 2) == 'd|'
-      @term.write ev.data.slice(2)
+    type = ev.data.slice(0, 2)
+    switch type
+      when 'd|'
+        @term.write ev.data.slice(2)
+      when 'c|'
+        @close()
 
   didFail: (ev) ->
 
