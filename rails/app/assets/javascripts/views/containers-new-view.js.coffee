@@ -22,11 +22,7 @@ App.ContainersNewView = Em.View.extend
       when 'base-image'
         @get 'selectedBaseImage'
       else
-        repo = @get 'customImage'
-        unless repo.match /^.*:.+$/
-          repo = repo.replace /:?$/, ':latest'
-        @set 'customImage', repo
-        repo
+        @get 'customImage'
   ).property 'selectedOption', 'selectedHostImage', 'selectedBaseImage', 'customImage', 'controller.hostImagesIsEmpty'
 
   baseImageOptionDisabled: (->

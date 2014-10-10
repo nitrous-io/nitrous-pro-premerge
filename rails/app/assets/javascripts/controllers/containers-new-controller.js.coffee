@@ -139,6 +139,8 @@ App.ContainersNewController = Em.Controller.extend
       @set 'saving', true
       events = App.get 'eventsSocket'
 
+      unless repository.match /^.*:.+$/
+        repository = repository.replace /:?$/, ':latest'
       name = @get 'name'
       slug = @get 'slug'
 
