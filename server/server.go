@@ -17,6 +17,7 @@ import (
 	"github.com/nitrous-io/nitrous-common/logger"
 	"github.com/nitrous-io/nitrous/db"
 	"github.com/nitrous-io/nitrous/middleware"
+	"github.com/nitrous-io/nitrous/pkg/analytics"
 	"github.com/nitrous-io/nitrous/pkg/httperror"
 	"github.com/nitrous-io/nitrous/pkg/pubsub"
 )
@@ -118,6 +119,11 @@ func (s *Server) routeJSON(route string, mw middleware.Middleware, methods ...st
 			s.HandleError(w, errors.New("Status and/or Data not set"))
 			return
 		}
+
+		if env.TrackEventName != "" {
+			analytics.Client.TrackEvent(env.TrackEventName, env.User, env.TrackEventData, env.Logger)
+		}
+
 		s.RespondEncodeJSON(w, env.Status, env.Data)
 	}
 	s.router.HandleFunc(route, h).Methods(methods...)

@@ -22,13 +22,15 @@ var (
 )
 
 type Env struct {
-	Root   string
-	Logger *logger.Logger
-	DB     *db.Database
-	Events *pubsub.Pubsub
-	Status int
-	User   *user.User
-	Data   map[string]interface{}
+	Root           string
+	Logger         *logger.Logger
+	DB             *db.Database
+	Events         *pubsub.Pubsub
+	Status         int
+	User           *user.User
+	Data           map[string]interface{}
+	TrackEventName string
+	TrackEventData map[string]interface{}
 }
 
 type Middleware func(env *Env, w http.ResponseWriter, r *http.Request) error
@@ -71,6 +73,13 @@ func Auth(mw Middleware) Middleware {
 
 		tok := authHeader[len(prefix):]
 		return authenticate(tok, mw, env, w, r)
+	}
+}
+
+func Track(event string, mw Middleware) Middleware {
+	return func(env *Env, w http.ResponseWriter, r *http.Request) error {
+		env.TrackEventName = event
+		return mw(env, w, r)
 	}
 }
 

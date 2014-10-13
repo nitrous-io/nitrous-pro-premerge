@@ -23,6 +23,7 @@ github.com/mitchellh/goamz #6f49d3df51d97907329f4caa251a5c1fb324410a
 github.com/nitrous-io/freighter/freighterclient #aa354f61944268d843f60ce44796455ae9e9d740 !git@github.com:nitrous-io/freighter
 github.com/nitrous-io/hostbuilder #13ce06cc3fefc1ec2ba0811040bcc7a14b1db816 !git@github.com:nitrous-io/hostbuilder
 github.com/nitrous-io/nitrous-common #6c62cee74c19ade828a5b2470497725c661595fc !git@github.com:nitrous-io/nitrous-common
+github.com/nitrous-io/go-mixpanel #5258575f8e3a6aee706c7f62e9ff05548fefaf7a
 github.com/onsi/ginkgo/ginkgo #12446bbcc74950944c897e32ea99cc8d058f9c92
 github.com/onsi/gomega #v1.0
 github.com/subosito/gotenv #d4d64e5ba2c20d2e97ef59f2f69e8644c49bd894
