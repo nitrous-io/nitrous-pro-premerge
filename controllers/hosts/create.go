@@ -85,6 +85,12 @@ func Create(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 	env.Data = map[string]interface{}{
 		"host": serializers.SerializeHost(h),
 	}
+	env.TrackEventData = map[string]interface{}{
+		"slug":    h.Slug,
+		"plan":    ctx.Plan.Name,
+		"region":  ctx.Region.Name,
+		"host_id": h.ID,
+	}
 	return nil
 }
 

@@ -25,6 +25,7 @@ import (
 	"github.com/nitrous-io/nitrous/models/token"
 	"github.com/nitrous-io/nitrous/models/user"
 	"github.com/nitrous-io/nitrous/models/volume"
+	"github.com/nitrous-io/nitrous/pkg/analytics"
 	"github.com/nitrous-io/nitrous/pkg/hostbuilderclient"
 	"github.com/nitrous-io/nitrous/pkg/pubsub"
 	"github.com/nitrous-io/nitrous/serializers"
@@ -44,7 +45,9 @@ var _ = Describe("POST /api/v0/hosts", func() {
 		authTokenInputs AuthTokenInputs
 		params          *url.Values
 
-		mockClient *freighterclient.MockClient
+		origAnalyticsClient analytics.Analytics
+		fakeAnalyticsClient *FakeAnalytics
+		mockClient          *freighterclient.MockClient
 
 		u  *user.User
 		t  *token.Token
@@ -56,6 +59,10 @@ var _ = Describe("POST /api/v0/hosts", func() {
 
 		mockClient = &freighterclient.MockClient{}
 		StubDefaultFreighterFn(mockClient)
+
+		origAnalyticsClient = analytics.Client
+		fakeAnalyticsClient = &FakeAnalytics{}
+		analytics.Client = fakeAnalyticsClient
 
 		db, err = TestDatabase("nitrous_test")
 		Expect(err).To(BeNil())
@@ -87,6 +94,7 @@ var _ = Describe("POST /api/v0/hosts", func() {
 			db.Close()
 		}
 		UnstubFreighterFn()
+		analytics.Client = origAnalyticsClient
 	})
 
 	BeforeEach(func() {
@@ -139,6 +147,14 @@ var _ = Describe("POST /api/v0/hosts", func() {
 		errType, errDesc := ErrorSlug(res.Body)
 		Expect(errType).To(Equal("invalid_request"))
 		Expect(errDesc).To(Equal("slug may only contain alphanumeric characters or dashes and cannot begin or end with a dash"))
+	})
+
+	It("should not send any analytics events if there are errors", func() {
+		params.Set("slug", "foo_bar")
+		doRequest(params)
+
+		Expect(fakeAnalyticsClient.TrackEventCalled).To(BeFalse())
+		Expect(fakeAnalyticsClient.Event).To(Equal(""))
 	})
 
 	It("responds with plan not found when a matching plan cannot be found for the specified size", func() {
@@ -237,6 +253,22 @@ var _ = Describe("POST /api/v0/hosts", func() {
 			Expect(h.Size.String).To(Equal(hs.P.Slug))
 			Expect(h.ProviderIdentifier.String).To(Equal("abcd1234"))
 			Expect(h.FreighterdPort.Int64).To(Equal(int64(65333)))
+		})
+
+		It("tracks the 'Host Created' event", func() {
+			doRequest(params)
+			Expect(fakeAnalyticsClient.TrackEventCalled).To(BeTrue())
+			Expect(fakeAnalyticsClient.Event).To(Equal(analytics.HostCreated))
+			Expect(fakeAnalyticsClient.User.ID).To(Equal(u.ID))
+			hosts, err := host.FindAllByUser(db, u)
+			Expect(err).To(BeNil())
+			Expect(hosts).To(HaveLen(1))
+
+			h := hosts[0]
+
+			eventJSON, err := json.Marshal(fakeAnalyticsClient.TrackEventProperties)
+			Expect(err).To(BeNil())
+			Expect(eventJSON).To(MatchJSON(fmt.Sprintf(`{"slug":"%s","host_id":%d,"plan":"%s","region":"%s"}`, h.Slug, h.ID, hs.P.Name, hs.R.Name)))
 		})
 
 		It("creates a keypair associated with that host", func() {
