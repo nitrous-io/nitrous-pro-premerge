@@ -110,6 +110,10 @@ App.ContainersNewView = Em.View.extend
       return if @get 'controller.saving'
       ui.showModal('#env-vars-dialog')
 
+    openExperimental: ->
+      return if @get 'controller.saving'
+      ui.showModal('#experimental-dialog')
+
     closeVolumeMounts: ->
       ui.hideModal('#volume-mounts-dialog')
 
@@ -118,6 +122,9 @@ App.ContainersNewView = Em.View.extend
 
     closeEnvVars: ->
       ui.hideModal('#env-vars-dialog')
+
+    closeExperimental: ->
+      ui.hideModal('#experimental-dialog')
 
     create: ->
       @get('controller').send 'create', @get('image')
