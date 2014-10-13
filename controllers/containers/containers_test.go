@@ -1888,16 +1888,25 @@ var _ = Describe("controllers/containers", func() {
 			Expect(pbs).To(ConsistOf("3030:4040", "5050:6060"))
 		})
 
+		Context("privileged option", func() {
+			It("defaults to false", func() {
+				Expect(getConfs().Privileged).To(BeFalse())
+			})
+
+			It("can be set to true", func() {
+				form.Add("privileged", "true")
+				Expect(getConfs().Privileged).To(BeTrue())
+			})
+		})
+
 		Context("publish all option", func() {
 			It("defaults to false", func() {
-				publishAll := getConfs().PublishAll
-				Expect(publishAll).To(BeFalse())
+				Expect(getConfs().PublishAll).To(BeFalse())
 			})
 
 			It("can be set to true", func() {
 				form.Add("publish_all", "1")
-				publishAll := getConfs().PublishAll
-				Expect(publishAll).To(BeTrue())
+				Expect(getConfs().PublishAll).To(BeTrue())
 			})
 		})
 

@@ -671,6 +671,7 @@ func prepareConfig(form url.Values, hv map[string]*volume.Volume) (*freightercli
 		}
 		c.Cmd = args
 	}
+	c.Privileged, _ = strconv.ParseBool(form.Get("privileged"))
 	c.PublishAll, _ = strconv.ParseBool(form.Get("publish_all"))
 	return c, nil
 }
