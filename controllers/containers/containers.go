@@ -267,6 +267,12 @@ func create(h runningHost, env *middleware.Env, w http.ResponseWriter, r *http.R
 		env.Data["error"] = "start_failed"
 		env.Data["error_description"] = startError.Error()
 	}
+	env.TrackEventData = map[string]interface{}{
+		"slug":         cn.Slug,
+		"image":        cn.Image,
+		"host_id":      cn.HostID,
+		"container_id": cn.ID,
+	}
 	return nil
 }
 
