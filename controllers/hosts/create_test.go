@@ -45,9 +45,9 @@ var _ = Describe("POST /api/v0/hosts", func() {
 		authTokenInputs AuthTokenInputs
 		params          *url.Values
 
-		origAnalyticsClient analytics.Analytics
-		fakeAnalyticsClient *FakeAnalytics
-		mockClient          *freighterclient.MockClient
+		fakeAnalyticsClient     *FakeAnalytics
+		mockClient              *freighterclient.MockClient
+		unstubAnalyticsClientFn func()
 
 		u  *user.User
 		t  *token.Token
@@ -60,9 +60,7 @@ var _ = Describe("POST /api/v0/hosts", func() {
 		mockClient = &freighterclient.MockClient{}
 		StubDefaultFreighterFn(mockClient)
 
-		origAnalyticsClient = analytics.Client
-		fakeAnalyticsClient = &FakeAnalytics{}
-		analytics.Client = fakeAnalyticsClient
+		fakeAnalyticsClient, unstubAnalyticsClientFn = StubAnalyticsClient()
 
 		db, err = TestDatabase("nitrous_test")
 		Expect(err).To(BeNil())
@@ -94,7 +92,7 @@ var _ = Describe("POST /api/v0/hosts", func() {
 			db.Close()
 		}
 		UnstubFreighterFn()
-		analytics.Client = origAnalyticsClient
+		unstubAnalyticsClientFn()
 	})
 
 	BeforeEach(func() {
@@ -153,8 +151,8 @@ var _ = Describe("POST /api/v0/hosts", func() {
 		params.Set("slug", "foo_bar")
 		doRequest(params)
 
-		Expect(fakeAnalyticsClient.TrackEventCalled).To(BeFalse())
-		Expect(fakeAnalyticsClient.Event).To(Equal(""))
+		Expect(fakeAnalyticsClient.TrackEventCalled).To(Equal(0))
+		Expect(fakeAnalyticsClient.Events).To(BeEmpty())
 	})
 
 	It("responds with plan not found when a matching plan cannot be found for the specified size", func() {
@@ -257,8 +255,8 @@ var _ = Describe("POST /api/v0/hosts", func() {
 
 		It("tracks the 'Host Created' event", func() {
 			doRequest(params)
-			Expect(fakeAnalyticsClient.TrackEventCalled).To(BeTrue())
-			Expect(fakeAnalyticsClient.Event).To(Equal(analytics.HostCreated))
+			Expect(fakeAnalyticsClient.TrackEventCalled).To(Equal(1))
+			Expect(fakeAnalyticsClient.Events).To(Equal([]string{analytics.HostCreated}))
 			Expect(fakeAnalyticsClient.User.ID).To(Equal(u.ID))
 			hosts, err := host.FindAllByUser(db, u)
 			Expect(err).To(BeNil())
@@ -268,7 +266,7 @@ var _ = Describe("POST /api/v0/hosts", func() {
 
 			eventJSON, err := json.Marshal(fakeAnalyticsClient.TrackEventProperties)
 			Expect(err).To(BeNil())
-			Expect(eventJSON).To(MatchJSON(fmt.Sprintf(`{"slug":"%s","host_id":%d,"plan":"%s","region":"%s"}`, h.Slug, h.ID, hs.P.Name, hs.R.Name)))
+			Expect(eventJSON).To(MatchJSON(fmt.Sprintf(`[{"slug":"%s","host_id":%d,"plan":"%s","region":"%s"}]`, h.Slug, h.ID, hs.P.Name, hs.R.Name)))
 		})
 
 		It("creates a keypair associated with that host", func() {

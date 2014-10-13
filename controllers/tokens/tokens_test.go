@@ -64,9 +64,9 @@ var _ = Describe("controllers/tokens", func() {
 
 	Describe("POST /tokens", func() {
 		var (
-			u                   *user.User
-			origAnalyticsClient analytics.Analytics
-			fakeAnalyticsClient *FakeAnalytics
+			u                       *user.User
+			fakeAnalyticsClient     *FakeAnalytics
+			unstubAnalyticsClientFn func()
 		)
 
 		BeforeEach(func() {
@@ -79,9 +79,7 @@ var _ = Describe("controllers/tokens", func() {
 			Expect(err).To(BeNil())
 			Expect(u.ID).NotTo(BeZero())
 
-			origAnalyticsClient = analytics.Client
-			fakeAnalyticsClient = &FakeAnalytics{}
-			analytics.Client = fakeAnalyticsClient
+			fakeAnalyticsClient, unstubAnalyticsClientFn = StubAnalyticsClient()
 
 			params = &url.Values{}
 			params.Set("grant_type", "password")
@@ -90,7 +88,7 @@ var _ = Describe("controllers/tokens", func() {
 		})
 
 		AfterEach(func() {
-			analytics.Client = origAnalyticsClient
+			unstubAnalyticsClientFn()
 		})
 
 		doRequest := func() {
@@ -141,13 +139,13 @@ var _ = Describe("controllers/tokens", func() {
 				})
 
 				It("tracks the 'User Signed In' event", func() {
-					Expect(fakeAnalyticsClient.TrackEventCalled).To(BeTrue())
-					Expect(fakeAnalyticsClient.Event).To(Equal(analytics.UserSignedIn))
+					Expect(fakeAnalyticsClient.TrackEventCalled).To(Equal(1))
+					Expect(fakeAnalyticsClient.Events).To(Equal([]string{analytics.UserSignedIn}))
 					Expect(fakeAnalyticsClient.User.ID).To(Equal(u.ID))
 				})
 
 				It("tracks the user as a new analytics profile", func() {
-					Expect(fakeAnalyticsClient.CreateProfileCalled).To(BeTrue())
+					Expect(fakeAnalyticsClient.CreateProfileCalled).To(Equal(1))
 					Expect(fakeAnalyticsClient.User.ID).To(Equal(u.ID))
 				})
 
@@ -254,8 +252,8 @@ var _ = Describe("controllers/tokens", func() {
 			})
 
 			It("shouldn't track any events", func() {
-				Expect(fakeAnalyticsClient.TrackEventCalled).To(BeFalse())
-				Expect(fakeAnalyticsClient.Event).To(Equal(""))
+				Expect(fakeAnalyticsClient.TrackEventCalled).To(Equal(0))
+				Expect(fakeAnalyticsClient.Events).To(BeEmpty())
 				Expect(fakeAnalyticsClient.User).To(BeNil())
 			})
 		})
@@ -275,8 +273,8 @@ var _ = Describe("controllers/tokens", func() {
 			})
 
 			It("shouldn't track any events", func() {
-				Expect(fakeAnalyticsClient.TrackEventCalled).To(BeFalse())
-				Expect(fakeAnalyticsClient.Event).To(Equal(""))
+				Expect(fakeAnalyticsClient.TrackEventCalled).To(Equal(0))
+				Expect(fakeAnalyticsClient.Events).To(BeEmpty())
 				Expect(fakeAnalyticsClient.User).To(BeNil())
 			})
 		})
@@ -298,8 +296,8 @@ var _ = Describe("controllers/tokens", func() {
 				})
 
 				It("shouldn't track any events", func() {
-					Expect(fakeAnalyticsClient.TrackEventCalled).To(BeFalse())
-					Expect(fakeAnalyticsClient.Event).To(Equal(""))
+					Expect(fakeAnalyticsClient.TrackEventCalled).To(Equal(0))
+					Expect(fakeAnalyticsClient.Events).To(BeEmpty())
 					Expect(fakeAnalyticsClient.User).To(BeNil())
 				})
 			})

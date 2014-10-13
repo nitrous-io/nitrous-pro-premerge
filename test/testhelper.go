@@ -19,6 +19,7 @@ import (
 	"github.com/nitrous-io/nitrous/controllers"
 	"github.com/nitrous-io/nitrous/db"
 	"github.com/nitrous-io/nitrous/models/token"
+	"github.com/nitrous-io/nitrous/pkg/analytics"
 )
 
 var tables []string // retrieve list of tables once and store here
@@ -199,4 +200,11 @@ func WrapInTransaction(db *db.Database, fn func(tx *sqlx.Tx) error) error {
 		return err
 	}
 	return tx.Commit()
+}
+
+func StubAnalyticsClient() (*FakeAnalytics, func()) {
+	origClient := analytics.Client
+	fakeClient := &FakeAnalytics{}
+	analytics.Client = fakeClient
+	return fakeClient, func() { analytics.Client = origClient }
 }
