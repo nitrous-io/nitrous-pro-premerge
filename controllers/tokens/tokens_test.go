@@ -146,6 +146,11 @@ var _ = Describe("controllers/tokens", func() {
 					Expect(fakeAnalyticsClient.User.ID).To(Equal(u.ID))
 				})
 
+				It("tracks the user as a new analytics profile", func() {
+					Expect(fakeAnalyticsClient.CreateProfileCalled).To(BeTrue())
+					Expect(fakeAnalyticsClient.User.ID).To(Equal(u.ID))
+				})
+
 				Context("making another token request", func() {
 					var prevToken interface{}
 
