@@ -1172,6 +1172,90 @@ var _ = Describe("controllers/images", func() {
 			})
 		})
 	})
+
+	Describe("GET /api/v0/hosts/{slug}/images/{image}", func() {
+		doRequest := func(host, img string, params *url.Values) *httptest.ResponseRecorder {
+			req, err := NewAuthedRequest(t, "GET", fmt.Sprintf("/api/v0/hosts/%v/images/%v", host, img), params)
+			Expect(err).To(BeNil())
+			res := httptest.NewRecorder()
+			svr.Router().ServeHTTP(res, req)
+			return res
+		}
+
+		It("should inform of not found errors", func() {
+			mockClient.InspectImageError = freighterclient.ErrImageNotFound
+			res := doRequest("foo", "nitrousio/elixir", nil)
+			Expect(mockClient.InspectImageCalled).To(Equal(1))
+			Expect(mockClient.InspectImageReceivedImage).To(Equal("nitrousio/elixir"))
+			Expect(res.Code).To(Equal(http.StatusNotFound))
+			errType, errDesc := ErrorSlug(res.Body)
+			Expect(errType).To(Equal("not_found"))
+			Expect(errDesc).To(ContainSubstring("image does not exist"))
+		})
+
+		It("should inform of auth failures", func() {
+			mockClient.InspectImageError = freighterclient.ErrImageAuthNotAllowed
+			res := doRequest("foo", "example.com/nitrousio/elixir", nil)
+			Expect(mockClient.InspectImageCalled).To(Equal(1))
+			Expect(mockClient.InspectImageReceivedImage).To(Equal("example.com/nitrousio/elixir"))
+			Expect(res.Code).To(Equal(http.StatusBadRequest))
+			errType, errDesc := ErrorSlug(res.Body)
+			Expect(errType).To(Equal("invalid_request"))
+			Expect(errDesc).To(ContainSubstring("you do not have access to this image"))
+		})
+
+		It("returns 500 on freighterclient error", func() {
+			mockClient.InspectImageError = &freighterclient.StatusError{Code: 418}
+			res := doRequest("foo", "example.com/nitrousio/scratch", nil)
+			Expect(mockClient.InspectImageCalled).To(Equal(1))
+			Expect(mockClient.InspectImageReceivedImage).To(Equal("example.com/nitrousio/scratch"))
+			errType, _ := ErrorSlug(res.Body)
+			Expect(errType).To(Equal("internal_server_error"))
+		})
+
+		It("should respond with the data returned by freighterclient", func() {
+			mockClient.InspectImageError = nil
+			mockClient.InspectImageReturn = &freighterclient.Image{
+				ID:          "IDx1",
+				Name:        "os2warp",
+				Tag:         "1998",
+				CreatedAt:   1901,
+				ActualSize:  902,
+				VirtualSize: 203,
+				Config: &freighterclient.DockerConfig{
+					PortSpecs: []string{"22/tcp", "139/udp"},
+					ExposedPorts: map[string]struct{}{
+						"22/tcp": struct{}{},
+					},
+					Env: []string{
+						"PWD=/dev/null",
+					},
+					Cmd: []string{
+						"/bin/bash",
+						"-c",
+						"sudo shutdown now",
+					},
+					Image: "IDx1",
+					Volumes: map[string]struct{}{
+						"/mnt/disk1:/mnt/disk2": struct{}{},
+					},
+				},
+			}
+
+			res := doRequest("foo", "example.com/nitrousio/centos", nil)
+			Expect(mockClient.InspectImageCalled).To(Equal(1))
+			Expect(mockClient.InspectImageReceivedImage).To(Equal("example.com/nitrousio/centos"))
+			Expect(res.Code).To(Equal(http.StatusOK))
+			var j map[string]freighterclient.Image
+			data := res.Body.Bytes()
+			err := json.Unmarshal(data, &j)
+			Expect(err).To(BeNil())
+
+			img := j["image"]
+			Expect(img).To(Equal(*mockClient.InspectImageReturn))
+		})
+
+	})
 })
 
 // freighter test server
