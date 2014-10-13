@@ -15,6 +15,7 @@ import (
 	"github.com/nitrous-io/nitrous/db"
 	"github.com/nitrous-io/nitrous/models/token"
 	"github.com/nitrous-io/nitrous/models/user"
+	"github.com/nitrous-io/nitrous/pkg/analytics"
 	"github.com/nitrous-io/nitrous/server"
 	. "github.com/nitrous-io/nitrous/test"
 	. "github.com/onsi/ginkgo"
@@ -62,7 +63,11 @@ var _ = Describe("controllers/tokens", func() {
 	})
 
 	Describe("POST /tokens", func() {
-		var u *user.User
+		var (
+			u                   *user.User
+			origAnalyticsClient analytics.Analytics
+			fakeAnalyticsClient *FakeAnalytics
+		)
 
 		BeforeEach(func() {
 			u = &user.User{
@@ -74,10 +79,18 @@ var _ = Describe("controllers/tokens", func() {
 			Expect(err).To(BeNil())
 			Expect(u.ID).NotTo(BeZero())
 
+			origAnalyticsClient = analytics.Client
+			fakeAnalyticsClient = &FakeAnalytics{}
+			analytics.Client = fakeAnalyticsClient
+
 			params = &url.Values{}
 			params.Set("grant_type", "password")
 			params.Set("username", "foo")
 			params.Set("password", "123456")
+		})
+
+		AfterEach(func() {
+			analytics.Client = origAnalyticsClient
 		})
 
 		doRequest := func() {
@@ -125,6 +138,12 @@ var _ = Describe("controllers/tokens", func() {
 				It("has no-cache headers", func() {
 					Expect(res.Header().Get("Cache-Control")).To(Equal("no-store"))
 					Expect(res.Header().Get("Pragma")).To(Equal("no-cache"))
+				})
+
+				It("tracks the 'User Signed In' event", func() {
+					Expect(fakeAnalyticsClient.TrackEventCalled).To(BeTrue())
+					Expect(fakeAnalyticsClient.Event).To(Equal(analytics.UserSignedIn))
+					Expect(fakeAnalyticsClient.User.ID).To(Equal(u.ID))
 				})
 
 				Context("making another token request", func() {
@@ -228,6 +247,12 @@ var _ = Describe("controllers/tokens", func() {
 				doRequest()
 				Expect(time.Now().Sub(start).Seconds()).To(BeNumerically("<", 0.2))
 			})
+
+			It("shouldn't track any events", func() {
+				Expect(fakeAnalyticsClient.TrackEventCalled).To(BeFalse())
+				Expect(fakeAnalyticsClient.Event).To(Equal(""))
+				Expect(fakeAnalyticsClient.User).To(BeNil())
+			})
 		})
 
 		Context("when grant type is not password", func() {
@@ -242,6 +267,12 @@ var _ = Describe("controllers/tokens", func() {
 				err := json.Unmarshal(res.Body.Bytes(), &j)
 				Expect(err).To(BeNil())
 				Expect(j["error"]).To(Equal("unsupported_grant_type"))
+			})
+
+			It("shouldn't track any events", func() {
+				Expect(fakeAnalyticsClient.TrackEventCalled).To(BeFalse())
+				Expect(fakeAnalyticsClient.Event).To(Equal(""))
+				Expect(fakeAnalyticsClient.User).To(BeNil())
 			})
 		})
 
@@ -259,6 +290,12 @@ var _ = Describe("controllers/tokens", func() {
 					Expect(err).To(BeNil())
 					Expect(j["error"]).To(Equal("invalid_request"))
 					Expect(j["error_description"]).To(Equal(v + " is required"))
+				})
+
+				It("shouldn't track any events", func() {
+					Expect(fakeAnalyticsClient.TrackEventCalled).To(BeFalse())
+					Expect(fakeAnalyticsClient.Event).To(Equal(""))
+					Expect(fakeAnalyticsClient.User).To(BeNil())
 				})
 			})
 		}

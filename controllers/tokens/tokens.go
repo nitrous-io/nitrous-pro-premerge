@@ -82,6 +82,7 @@ func Post(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("Pragma", "no-cache")
 
 	env.Status = http.StatusOK
+	env.User = u
 	env.Data = map[string]interface{}{
 		"access_token": t.Token,
 		"token_type":   "Bearer",
