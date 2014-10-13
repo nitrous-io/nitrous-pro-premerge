@@ -9,6 +9,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/nitrous-io/nitrous/middleware"
 	"github.com/nitrous-io/nitrous/models/user"
+	"github.com/nitrous-io/nitrous/pkg/analytics"
 	"github.com/nitrous-io/nitrous/pkg/httperror"
 	"github.com/nitrous-io/nitrous/serializers"
 )
@@ -84,6 +85,9 @@ func Create(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 	env.Data = map[string]interface{}{
 		"user": serializers.SerializeUser(u),
 	}
+	env.User = u
+
+	analytics.Client.CreateProfile(u, env.Logger)
 	return nil
 }
 

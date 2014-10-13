@@ -14,6 +14,7 @@ import (
 	"github.com/nitrous-io/nitrous/db"
 	"github.com/nitrous-io/nitrous/models/token"
 	"github.com/nitrous-io/nitrous/models/user"
+	"github.com/nitrous-io/nitrous/pkg/analytics"
 	"github.com/nitrous-io/nitrous/pkg/bcrypt"
 	"github.com/nitrous-io/nitrous/serializers"
 	"github.com/nitrous-io/nitrous/server"
@@ -29,15 +30,17 @@ func Test(t *testing.T) {
 
 var _ = Describe("controllers/users", func() {
 	var (
-		db              *db.Database
-		handler         *mux.Router
-		res             *httptest.ResponseRecorder
-		req             *http.Request
-		svr             *server.Server
-		params          *url.Values
-		authTokenInputs AuthTokenInputs
-		u               *user.User
-		t               *token.Token
+		db                  *db.Database
+		handler             *mux.Router
+		res                 *httptest.ResponseRecorder
+		req                 *http.Request
+		svr                 *server.Server
+		params              *url.Values
+		authTokenInputs     AuthTokenInputs
+		u                   *user.User
+		t                   *token.Token
+		origAnalyticsClient analytics.Analytics
+		fakeAnalyticsClient *FakeAnalytics
 	)
 
 	BeforeEach(func() {
@@ -64,12 +67,16 @@ var _ = Describe("controllers/users", func() {
 		}
 		err = t.Insert(db)
 		Expect(err).To(BeNil())
+		origAnalyticsClient = analytics.Client
+		fakeAnalyticsClient = &FakeAnalytics{}
+		analytics.Client = fakeAnalyticsClient
 	})
 
 	AfterEach(func() {
 		if db != nil {
 			db.Close()
 		}
+		analytics.Client = origAnalyticsClient
 	})
 
 	Describe("POST /api/v0/users", func() {
@@ -118,6 +125,21 @@ var _ = Describe("controllers/users", func() {
 				Expect(j.User.Username).To(Equal("foo"))
 				Expect(j.User.Email).To(Equal("foo@example.com"))
 			})
+
+			It("tracks the 'User Signed Up' event", func() {
+				u, err := user.FindByUsername(db, "foo")
+				Expect(err).To(BeNil())
+				Expect(fakeAnalyticsClient.TrackEventCalled).To(BeTrue())
+				Expect(fakeAnalyticsClient.Event).To(Equal(analytics.UserSignedUp))
+				Expect(fakeAnalyticsClient.User.ID).To(Equal(u.ID))
+			})
+
+			It("tracks the user as a new analytics profile", func() {
+				u, err := user.FindByUsername(db, "foo")
+				Expect(err).To(BeNil())
+				Expect(fakeAnalyticsClient.CreateProfileCalled).To(BeTrue())
+				Expect(fakeAnalyticsClient.User.ID).To(Equal(u.ID))
+			})
 		})
 
 		for _, v := range []string{"email", "username", "password", "code"} {
@@ -140,6 +162,12 @@ var _ = Describe("controllers/users", func() {
 					Expect(j["error"]).To(Equal("validation_failed"))
 					Expect(j["error_description"]).To(Equal(v + " can't be blank"))
 				})
+
+				It("shouldn't do any event tracking", func() {
+					Expect(fakeAnalyticsClient.TrackEventCalled).To(BeFalse())
+					Expect(fakeAnalyticsClient.Event).To(Equal(""))
+					Expect(fakeAnalyticsClient.User).To(BeNil())
+				})
 			})
 		}
 
@@ -161,6 +189,12 @@ var _ = Describe("controllers/users", func() {
 				Expect(j["error"]).To(Equal("validation_failed"))
 				Expect(j["error_description"]).To(Equal("email is not valid"))
 			})
+
+			It("shouldn't do any event tracking", func() {
+				Expect(fakeAnalyticsClient.TrackEventCalled).To(BeFalse())
+				Expect(fakeAnalyticsClient.Event).To(Equal(""))
+				Expect(fakeAnalyticsClient.User).To(BeNil())
+			})
 		})
 
 		Context("when an incorrect sign up code is given", func() {
@@ -180,6 +214,12 @@ var _ = Describe("controllers/users", func() {
 				Expect(err).To(BeNil())
 				Expect(j["error"]).To(Equal("validation_failed"))
 				Expect(j["error_description"]).To(Equal("code is incorrect"))
+			})
+
+			It("shouldn't do any event tracking", func() {
+				Expect(fakeAnalyticsClient.TrackEventCalled).To(BeFalse())
+				Expect(fakeAnalyticsClient.Event).To(Equal(""))
+				Expect(fakeAnalyticsClient.User).To(BeNil())
 			})
 		})
 
