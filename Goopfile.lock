@@ -20,7 +20,7 @@ github.com/kr/pty #67e2db24c831afa6c64fc17b4a143390674365ef
 github.com/kr/text #6807e777504f54ad073ecef66747de158294b639
 github.com/lib/pq #ae7391529ced9c12f06bf01eae33dadb4c70e49f
 github.com/mitchellh/goamz #6f49d3df51d97907329f4caa251a5c1fb324410a
-github.com/nitrous-io/freighter/freighterclient #fecaf86566e9c52bbccf1d00a9ec7e36959a7602 !git@github.com:nitrous-io/freighter
+github.com/nitrous-io/freighter/freighterclient #aa354f61944268d843f60ce44796455ae9e9d740 !git@github.com:nitrous-io/freighter
 github.com/nitrous-io/hostbuilder #13ce06cc3fefc1ec2ba0811040bcc7a14b1db816 !git@github.com:nitrous-io/hostbuilder
 github.com/nitrous-io/nitrous-common #6c62cee74c19ade828a5b2470497725c661595fc !git@github.com:nitrous-io/nitrous-common
 github.com/onsi/ginkgo/ginkgo #12446bbcc74950944c897e32ea99cc8d058f9c92
