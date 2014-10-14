@@ -16,10 +16,12 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/nitrous-io/nitrous-common/logger"
 	"github.com/nitrous-io/nitrous/controllers"
 	"github.com/nitrous-io/nitrous/db"
 	"github.com/nitrous-io/nitrous/models/token"
 	"github.com/nitrous-io/nitrous/pkg/analytics"
+	"github.com/nitrous-io/nitrous/server"
 )
 
 var tables []string // retrieve list of tables once and store here
@@ -202,9 +204,9 @@ func WrapInTransaction(db *db.Database, fn func(tx *sqlx.Tx) error) error {
 	return tx.Commit()
 }
 
-func StubAnalyticsClient() (*FakeAnalytics, func()) {
-	origClient := analytics.Client
-	fakeClient := &FakeAnalytics{}
-	analytics.Client = fakeClient
-	return fakeClient, func() { analytics.Client = origClient }
+func NewTestServer(root string, db *db.Database, l *logger.Logger, t analytics.Tracker) *server.Server {
+	svr := server.NewServer(root, db, l)
+	svr.Tracker = t
+
+	return svr
 }

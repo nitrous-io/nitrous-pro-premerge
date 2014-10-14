@@ -5,9 +5,7 @@ import (
 	"github.com/nitrous-io/nitrous/models/user"
 )
 
-var Client Analytics = NewMixpanelAnalytics()
-
-type Analytics interface {
+type Tracker interface {
 	TrackEvent(event string, u *user.User, p map[string]interface{}, logger *logger.Logger)
 	CreateProfile(u *user.User, logger *logger.Logger)
 }

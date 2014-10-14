@@ -30,17 +30,15 @@ func Test(t *testing.T) {
 
 var _ = Describe("controllers/users", func() {
 	var (
-		db                      *db.Database
-		handler                 *mux.Router
-		res                     *httptest.ResponseRecorder
-		req                     *http.Request
-		svr                     *server.Server
-		params                  *url.Values
-		authTokenInputs         AuthTokenInputs
-		u                       *user.User
-		t                       *token.Token
-		fakeAnalyticsClient     *FakeAnalytics
-		unstubAnalyticsClientFn func()
+		db              *db.Database
+		handler         *mux.Router
+		res             *httptest.ResponseRecorder
+		req             *http.Request
+		svr             *server.Server
+		params          *url.Values
+		authTokenInputs AuthTokenInputs
+		u               *user.User
+		t               *token.Token
 	)
 
 	BeforeEach(func() {
@@ -48,7 +46,7 @@ var _ = Describe("controllers/users", func() {
 		db, err = TestDatabase("nitrous_test")
 		Expect(err).To(BeNil())
 		logger := &logger.Logger{Level: logger.LogLevelQuiet}
-		svr = server.NewServer("", db, logger)
+		svr = NewTestServer("", db, logger, NewFakeTracker())
 		handler = svr.Router()
 		res = httptest.NewRecorder()
 		authTokenInputs = AuthTokenInputs{Handler: handler}
@@ -67,14 +65,12 @@ var _ = Describe("controllers/users", func() {
 		}
 		err = t.Insert(db)
 		Expect(err).To(BeNil())
-		fakeAnalyticsClient, unstubAnalyticsClientFn = StubAnalyticsClient()
 	})
 
 	AfterEach(func() {
 		if db != nil {
 			db.Close()
 		}
-		unstubAnalyticsClientFn()
 	})
 
 	Describe("POST /api/v0/users", func() {
@@ -127,16 +123,17 @@ var _ = Describe("controllers/users", func() {
 			It("tracks the 'User Signed Up' event", func() {
 				u, err := user.FindByUsername(db, "foo")
 				Expect(err).To(BeNil())
-				Expect(fakeAnalyticsClient.TrackEventCalled).To(Equal(1))
-				Expect(fakeAnalyticsClient.Events).To(Equal([]string{analytics.UserSignedUp}))
-				Expect(fakeAnalyticsClient.User.ID).To(Equal(u.ID))
+				t, ok := svr.Tracker.(*FakeTracker)
+				Expect(ok).To(BeTrue())
+				Expect(t.Events[u.ID]).To(Equal([]string{analytics.UserSignedUp}))
 			})
 
 			It("tracks the user as a new analytics profile", func() {
 				u, err := user.FindByUsername(db, "foo")
 				Expect(err).To(BeNil())
-				Expect(fakeAnalyticsClient.CreateProfileCalled).To(Equal(1))
-				Expect(fakeAnalyticsClient.User.ID).To(Equal(u.ID))
+				t, ok := svr.Tracker.(*FakeTracker)
+				Expect(ok).To(BeTrue())
+				Expect(t.ProfileCreated.ID).To(Equal(u.ID))
 			})
 		})
 
@@ -162,9 +159,9 @@ var _ = Describe("controllers/users", func() {
 				})
 
 				It("shouldn't do any event tracking", func() {
-					Expect(fakeAnalyticsClient.TrackEventCalled).To(Equal(0))
-					Expect(fakeAnalyticsClient.Events).To(BeEmpty())
-					Expect(fakeAnalyticsClient.User).To(BeNil())
+					t, ok := svr.Tracker.(*FakeTracker)
+					Expect(ok).To(BeTrue())
+					Expect(t.Events[u.ID]).To(BeEmpty())
 				})
 			})
 		}
@@ -189,9 +186,9 @@ var _ = Describe("controllers/users", func() {
 			})
 
 			It("shouldn't do any event tracking", func() {
-				Expect(fakeAnalyticsClient.TrackEventCalled).To(Equal(0))
-				Expect(fakeAnalyticsClient.Events).To(BeEmpty())
-				Expect(fakeAnalyticsClient.User).To(BeNil())
+				t, ok := svr.Tracker.(*FakeTracker)
+				Expect(ok).To(BeTrue())
+				Expect(t.Events[u.ID]).To(BeEmpty())
 			})
 		})
 
@@ -215,9 +212,9 @@ var _ = Describe("controllers/users", func() {
 			})
 
 			It("shouldn't do any event tracking", func() {
-				Expect(fakeAnalyticsClient.TrackEventCalled).To(Equal(0))
-				Expect(fakeAnalyticsClient.Events).To(BeEmpty())
-				Expect(fakeAnalyticsClient.User).To(BeNil())
+				t, ok := svr.Tracker.(*FakeTracker)
+				Expect(ok).To(BeTrue())
+				Expect(t.Events[u.ID]).To(BeEmpty())
 			})
 		})
 

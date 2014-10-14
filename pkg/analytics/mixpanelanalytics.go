@@ -33,21 +33,21 @@ func init() {
 	}
 }
 
-type MixpanelAnalytics struct {
+type MixpanelTracker struct {
 	client *mixpanel.Mixpanel
 }
 
-func NewMixpanelAnalytics() *MixpanelAnalytics {
+func NewMixpanelTracker() *MixpanelTracker {
 	var mc *mixpanel.Mixpanel = nil
 
 	if !disabled {
 		mc = mixpanel.NewMixpanelClient(mixpanelToken)
 	}
 
-	return &MixpanelAnalytics{client: mc}
+	return &MixpanelTracker{client: mc}
 }
 
-func (m *MixpanelAnalytics) TrackEvent(event string, u *user.User, p map[string]interface{}, logger *logger.Logger) {
+func (m *MixpanelTracker) TrackEvent(event string, u *user.User, p map[string]interface{}, logger *logger.Logger) {
 	if disabled {
 		return
 	}
@@ -67,7 +67,7 @@ func (m *MixpanelAnalytics) TrackEvent(event string, u *user.User, p map[string]
 	}()
 }
 
-func (m *MixpanelAnalytics) CreateProfile(u *user.User, logger *logger.Logger) {
+func (m *MixpanelTracker) CreateProfile(u *user.User, logger *logger.Logger) {
 	if disabled {
 		return
 	}

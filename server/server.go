@@ -29,11 +29,12 @@ var jsonNotFound = []byte(`{"error":"not_found","error_description":"not found"}
 var nsStack []string = []string{}
 
 type Server struct {
-	Events *pubsub.Pubsub
-	router *mux.Router
-	root   string
-	logger *logger.Logger
-	db     *db.Database
+	Events  *pubsub.Pubsub
+	router  *mux.Router
+	root    string
+	logger  *logger.Logger
+	db      *db.Database
+	Tracker analytics.Tracker
 }
 
 func NewServer(root string, db *db.Database, l *logger.Logger) *Server {
@@ -42,11 +43,12 @@ func NewServer(root string, db *db.Database, l *logger.Logger) *Server {
 	}
 
 	svr := &Server{
-		root:   root,
-		db:     db,
-		logger: l,
-		router: mux.NewRouter(),
-		Events: pubsub.New(128),
+		root:    root,
+		db:      db,
+		logger:  l,
+		router:  mux.NewRouter(),
+		Events:  pubsub.New(128),
+		Tracker: analytics.NewMixpanelTracker(),
 	}
 	svr.drawRoutes()
 	return svr
@@ -95,6 +97,7 @@ func (s *Server) route(route string, mw middleware.Middleware, methods ...string
 			DB:         s.db,
 			Events:     s.Events,
 			RemoteAddr: getRemoteAddr(r),
+			Tracker:    s.Tracker,
 		}, w, r)
 		if err != nil {
 			s.HandleError(w, err)
@@ -113,6 +116,7 @@ func (s *Server) routeJSON(route string, mw middleware.Middleware, methods ...st
 			DB:         s.db,
 			Events:     s.Events,
 			RemoteAddr: getRemoteAddr(r),
+			Tracker:    s.Tracker,
 		}
 		if err := mw(env, w, r); err != nil {
 			s.HandleError(w, err)
@@ -121,13 +125,6 @@ func (s *Server) routeJSON(route string, mw middleware.Middleware, methods ...st
 		if env.Status == 0 || env.Data == nil {
 			s.HandleError(w, errors.New("Status and/or Data not set"))
 			return
-		}
-
-		if env.TrackEventName != "" {
-			if env.RemoteAddr != "" {
-				env.TrackEventData["$ip"] = env.RemoteAddr
-			}
-			analytics.Client.TrackEvent(env.TrackEventName, env.User, env.TrackEventData, env.Logger)
 		}
 
 		s.RespondEncodeJSON(w, env.Status, env.Data)

@@ -45,9 +45,7 @@ var _ = Describe("POST /api/v0/hosts", func() {
 		authTokenInputs AuthTokenInputs
 		params          *url.Values
 
-		fakeAnalyticsClient     *FakeAnalytics
-		mockClient              *freighterclient.MockClient
-		unstubAnalyticsClientFn func()
+		mockClient *freighterclient.MockClient
 
 		u  *user.User
 		t  *token.Token
@@ -60,12 +58,10 @@ var _ = Describe("POST /api/v0/hosts", func() {
 		mockClient = &freighterclient.MockClient{}
 		StubDefaultFreighterFn(mockClient)
 
-		fakeAnalyticsClient, unstubAnalyticsClientFn = StubAnalyticsClient()
-
 		db, err = TestDatabase("nitrous_test")
 		Expect(err).To(BeNil())
 		logger := &logger.Logger{Level: logger.LogLevelQuiet}
-		svr = server.NewServer("", db, logger)
+		svr = NewTestServer("", db, logger, NewFakeTracker())
 		handler = svr.Router()
 		res = httptest.NewRecorder()
 		authTokenInputs = AuthTokenInputs{Handler: handler}
@@ -92,7 +88,6 @@ var _ = Describe("POST /api/v0/hosts", func() {
 			db.Close()
 		}
 		UnstubFreighterFn()
-		unstubAnalyticsClientFn()
 	})
 
 	BeforeEach(func() {
@@ -150,9 +145,10 @@ var _ = Describe("POST /api/v0/hosts", func() {
 	It("should not send any analytics events if there are errors", func() {
 		params.Set("slug", "foo_bar")
 		doRequest(params)
+		t, ok := svr.Tracker.(*FakeTracker)
+		Expect(ok).To(BeTrue())
 
-		Expect(fakeAnalyticsClient.TrackEventCalled).To(Equal(0))
-		Expect(fakeAnalyticsClient.Events).To(BeEmpty())
+		Expect(t.Events[u.ID]).To(BeEmpty())
 	})
 
 	It("responds with plan not found when a matching plan cannot be found for the specified size", func() {
@@ -255,16 +251,17 @@ var _ = Describe("POST /api/v0/hosts", func() {
 
 		It("tracks the 'Host Created' event", func() {
 			doRequest(params)
-			Expect(fakeAnalyticsClient.TrackEventCalled).To(Equal(1))
-			Expect(fakeAnalyticsClient.Events).To(Equal([]string{analytics.HostCreated}))
-			Expect(fakeAnalyticsClient.User.ID).To(Equal(u.ID))
+			t, ok := svr.Tracker.(*FakeTracker)
+			Expect(ok).To(BeTrue())
+
+			Expect(t.Events[u.ID]).To(Equal([]string{analytics.HostCreated}))
 			hosts, err := host.FindAllByUser(db, u)
 			Expect(err).To(BeNil())
 			Expect(hosts).To(HaveLen(1))
 
 			h := hosts[0]
 
-			eventJSON, err := json.Marshal(fakeAnalyticsClient.TrackEventProperties)
+			eventJSON, err := json.Marshal(t.TrackEventProperties[u.ID])
 			Expect(err).To(BeNil())
 			Expect(eventJSON).To(MatchJSON(fmt.Sprintf(`[{"slug":"%s","host_id":%d,"plan":"%s","region":"%s"}]`, h.Slug, h.ID, hs.P.Name, hs.R.Name)))
 		})

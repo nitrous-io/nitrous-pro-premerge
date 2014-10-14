@@ -6,27 +6,37 @@ import (
 	"github.com/nitrous-io/nitrous-common/logger"
 )
 
-type FakeAnalytics struct {
-	Events               []string
-	TrackEventProperties []map[string]interface{}
-	User                 *user.User
-	TrackEventCalled     int
-	CreateProfileCalled  int
+type FakeTracker struct {
+	Events               map[int64][]string
+	TrackEventProperties map[int64][]map[string]interface{}
+	ProfileCreated       *user.User
 }
 
-func NewFakeAnalytics() *FakeAnalytics {
-	return &FakeAnalytics{}
+func NewFakeTracker() *FakeTracker {
+	return &FakeTracker{
+		Events:               map[int64][]string{},
+		TrackEventProperties: map[int64][]map[string]interface{}{},
+	}
 }
 
-func (f *FakeAnalytics) TrackEvent(event string, u *user.User, p map[string]interface{}, logger *logger.Logger) {
-	f.TrackEventCalled += 1
-	f.Events = append(f.Events, event)
-	f.User = u
+func (f *FakeTracker) TrackEvent(event string, u *user.User, p map[string]interface{}, logger *logger.Logger) {
+	if u == nil {
+		return
+	}
 
-	f.TrackEventProperties = append(f.TrackEventProperties, p)
+	if f.Events[u.ID] == nil {
+		f.Events = map[int64][]string{u.ID: []string{event}}
+	} else {
+		f.Events[u.ID] = append(f.Events[u.ID], event)
+	}
+
+	if f.TrackEventProperties[u.ID] == nil {
+		f.TrackEventProperties = map[int64][]map[string]interface{}{u.ID: []map[string]interface{}{p}}
+	} else {
+		f.TrackEventProperties[u.ID] = append(f.TrackEventProperties[u.ID], p)
+	}
 }
 
-func (f *FakeAnalytics) CreateProfile(u *user.User, logger *logger.Logger) {
-	f.CreateProfileCalled += 1
-	f.User = u
+func (f *FakeTracker) CreateProfile(u *user.User, logger *logger.Logger) {
+	f.ProfileCreated = u
 }

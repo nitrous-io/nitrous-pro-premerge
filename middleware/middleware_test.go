@@ -50,8 +50,9 @@ var _ = Describe("middleware", func() {
 			return nil
 		}
 		env = &middleware.Env{
-			Logger: logger,
-			DB:     db,
+			Logger:  logger,
+			DB:      db,
+			Tracker: NewFakeTracker(),
 		}
 	})
 
@@ -210,7 +211,7 @@ var _ = Describe("middleware", func() {
 			handler.ServeHTTP(res, req)
 		})
 
-		It("sets the TrackedEventName in the environment", func() {
+		It("sets the TrackEventName in the environment", func() {
 			Expect(env.TrackEventName).To(Equal("Action Called"))
 		})
 
