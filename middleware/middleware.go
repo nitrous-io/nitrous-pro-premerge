@@ -31,6 +31,7 @@ type Env struct {
 	Data           map[string]interface{}
 	TrackEventName string
 	TrackEventData map[string]interface{}
+	RemoteAddr     string
 }
 
 type Middleware func(env *Env, w http.ResponseWriter, r *http.Request) error
