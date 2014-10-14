@@ -23,7 +23,7 @@
                     | Created&nbsp;
                     = ago image.createdAt
             .right-accessory
-              button.ui.btn click='showPushDialog image target="view"' Push...
+              button.ui.btn click='showPushDialog image target="view"' disabled={image.updating} Push...
     else
       p.hint-text
         i.fa.fa-exclamation-circle
