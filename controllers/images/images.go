@@ -27,6 +27,7 @@ var (
 	errImageInUse       = httperror.New(http.StatusBadRequest, "invalid_request", "image is being used by one or more containers")
 	errImageMissing     = httperror.New(http.StatusNotFound, "not_found", "image does not exist")
 	errFileRequired     = httperror.New(http.StatusBadRequest, "invalid_request", "an archive or a plain file is required")
+	errImageAuthFailed  = httperror.New(http.StatusBadRequest, "invalid_request", "you do not have access to this image")
 
 	errInvalidArchive = httperror.New(http.StatusBadRequest, "invalid_request", "not a valid Docker archive")
 )
@@ -242,6 +243,38 @@ func Tag(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Reque
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
 		"image": serializers.SerializeImage(taggedImg),
+	}
+	return nil
+}
+
+func Inspect(h *host.Host, env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
+	db := env.DB
+	cl, err := controllers.NewFreighterClient(db, h)
+	if err != nil {
+		return err
+	}
+
+	slug := mux.Vars(r)["image"]
+	if slug == "" {
+		return errIDOrSlugRequired
+	}
+
+	img, err := cl.InspectImage(slug)
+	if err != nil {
+		if err == freighterclient.ErrImageNotFound {
+			return errImageMissing
+		}
+
+		if err == freighterclient.ErrImageAuthNotAllowed {
+			return errImageAuthFailed
+		}
+
+		return err
+	}
+
+	env.Status = http.StatusOK
+	env.Data = map[string]interface{}{
+		"image": img,
 	}
 	return nil
 }
