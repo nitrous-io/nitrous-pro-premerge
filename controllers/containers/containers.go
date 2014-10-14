@@ -344,15 +344,13 @@ func config(cn *container.Container, h *host.Host, env *middleware.Env, w http.R
 		return err
 	}
 
-	cnrConfig, cnrHostConfig, imgConfig, err := cl.Config(cn.CID)
+	config, err := cl.Config(cn.CID)
 	if err != nil {
 		return err
 	}
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
-		"config":       cnrConfig,
-		"host_config":  cnrHostConfig,
-		"image_config": imgConfig,
+		"config": config,
 	}
 
 	return nil
