@@ -78,7 +78,7 @@ func (s *Server) drawRoutes() {
 		s.routeJSON("/containers/{slug}/restart", mw.Auth(containers.Restart), "POST")
 		s.routeJSON("/containers/{slug}/reconfig", mw.Auth(containers.Reconfig), "POST")
 		s.routeJSON("/containers/{slug}", mw.Auth(containers.Destroy), "DELETE")
-		s.routeJSON("/containers/{slug}/token", mw.Auth(containers.Token), "POST")
+		s.routeJSON("/containers/{slug}/token", mw.Track(analytics.ContainerAccessed, mw.Auth(containers.Token)), "POST")
 
 		s.routeJSON("/containers/{slug}/keys", mw.Auth(keys.Index), "GET")
 		s.routeJSON("/containers/{slug}/keys", mw.Auth(keys.Create), "POST")

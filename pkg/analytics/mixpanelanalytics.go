@@ -12,10 +12,11 @@ import (
 )
 
 const (
-	UserSignedUp     = "User Signed Up"
-	UserSignedIn     = "User Signed In"
-	HostCreated      = "Host Created"
-	ContainerCreated = "Container Created"
+	UserSignedUp      = "User Signed Up"
+	UserSignedIn      = "User Signed In"
+	HostCreated       = "Host Created"
+	ContainerCreated  = "Container Created"
+	ContainerAccessed = "Container Token Requested"
 )
 
 var (
