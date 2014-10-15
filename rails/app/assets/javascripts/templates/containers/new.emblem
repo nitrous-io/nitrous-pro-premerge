@@ -209,12 +209,18 @@ form submit='create target="view"'
       | Experimental Settings
     form
       .card-body
-        ul.ui.checkbox-group
+        ul.ui.checkbox-group class={view.privilegedModeDisabled:disabled}
           li
-            .ui.checkbox
-              = input type='checkbox' id='containers-new-privileged' checked=privileged
-              label
-            label for='containers-new-privileged' Privileged mode
+            if view.privilegedModeDisabled
+              .ui.checkbox
+                = input type='checkbox' id='containers-new-privileged' checked='checked' disabled='disabled'
+                label
+              label for='containers-new-privileged' Privileged mode (required)
+            else
+              .ui.checkbox
+                = input type='checkbox' id='containers-new-privileged' checked=privileged
+                label
+              label for='containers-new-privileged' Privileged mode
     .card-footer
       .right
         button.ui.btn.primary click='closeExperimental target="view"' Done
