@@ -15,6 +15,7 @@ import (
 	"github.com/nitrous-io/nitrous/db"
 	"github.com/nitrous-io/nitrous/models/token"
 	"github.com/nitrous-io/nitrous/models/user"
+	"github.com/nitrous-io/nitrous/pkg/analytics"
 	"github.com/nitrous-io/nitrous/server"
 	. "github.com/nitrous-io/nitrous/test"
 	. "github.com/onsi/ginkgo"
@@ -50,7 +51,7 @@ var _ = Describe("controllers/tokens", func() {
 		db, err = TestDatabase("nitrous_test")
 		Expect(err).To(BeNil())
 		logger := &logger.Logger{Level: logger.LogLevelQuiet}
-		svr = server.NewServer("", db, logger)
+		svr = NewTestServer("", db, logger, NewFakeTracker())
 		handler = svr.Router()
 		res = httptest.NewRecorder()
 	})
@@ -62,7 +63,9 @@ var _ = Describe("controllers/tokens", func() {
 	})
 
 	Describe("POST /tokens", func() {
-		var u *user.User
+		var (
+			u *user.User
+		)
 
 		BeforeEach(func() {
 			u = &user.User{
@@ -125,6 +128,18 @@ var _ = Describe("controllers/tokens", func() {
 				It("has no-cache headers", func() {
 					Expect(res.Header().Get("Cache-Control")).To(Equal("no-store"))
 					Expect(res.Header().Get("Pragma")).To(Equal("no-cache"))
+				})
+
+				It("tracks the 'User Signed In' event", func() {
+					t, ok := svr.Tracker.(*FakeTracker)
+					Expect(ok).To(BeTrue())
+					Expect(t.Events[u.ID]).To(Equal([]string{analytics.UserSignedIn}))
+				})
+
+				It("tracks the user as a new analytics profile", func() {
+					t, ok := svr.Tracker.(*FakeTracker)
+					Expect(ok).To(BeTrue())
+					Expect(t.ProfileCreated.ID).To(Equal(u.ID))
 				})
 
 				Context("making another token request", func() {
@@ -228,6 +243,12 @@ var _ = Describe("controllers/tokens", func() {
 				doRequest()
 				Expect(time.Now().Sub(start).Seconds()).To(BeNumerically("<", 0.2))
 			})
+
+			It("shouldn't track any events", func() {
+				t, ok := svr.Tracker.(*FakeTracker)
+				Expect(ok).To(BeTrue())
+				Expect(t.Events[u.ID]).To(BeEmpty())
+			})
 		})
 
 		Context("when grant type is not password", func() {
@@ -242,6 +263,12 @@ var _ = Describe("controllers/tokens", func() {
 				err := json.Unmarshal(res.Body.Bytes(), &j)
 				Expect(err).To(BeNil())
 				Expect(j["error"]).To(Equal("unsupported_grant_type"))
+			})
+
+			It("shouldn't track any events", func() {
+				t, ok := svr.Tracker.(*FakeTracker)
+				Expect(ok).To(BeTrue())
+				Expect(t.Events[u.ID]).To(BeEmpty())
 			})
 		})
 
@@ -259,6 +286,12 @@ var _ = Describe("controllers/tokens", func() {
 					Expect(err).To(BeNil())
 					Expect(j["error"]).To(Equal("invalid_request"))
 					Expect(j["error_description"]).To(Equal(v + " is required"))
+				})
+
+				It("shouldn't track any events", func() {
+					t, ok := svr.Tracker.(*FakeTracker)
+					Expect(ok).To(BeTrue())
+					Expect(t.Events[u.ID]).To(BeEmpty())
 				})
 			})
 		}

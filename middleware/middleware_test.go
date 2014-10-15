@@ -50,8 +50,9 @@ var _ = Describe("middleware", func() {
 			return nil
 		}
 		env = &middleware.Env{
-			Logger: logger,
-			DB:     db,
+			Logger:  logger,
+			DB:      db,
+			Tracker: NewFakeTracker(),
 		}
 	})
 
@@ -187,6 +188,35 @@ var _ = Describe("middleware", func() {
 
 				itWorks()
 			})
+		})
+	})
+
+	Describe("event tracking middleware", func() {
+		var (
+			mw func(event string, mw middleware.Middleware) middleware.Middleware
+		)
+
+		BeforeEach(func() {
+			mw = middleware.Track
+			h := func(w http.ResponseWriter, r *http.Request) {
+				err := middleware.Track("Action Called", emptyMw)(env, w, r)
+				if err != nil {
+					svr.HandleError(w, err)
+				}
+			}
+			handler.HandleFunc("/action", h).Methods("GET")
+
+			req, err := NewRequest("GET", "/action", nil)
+			Expect(err).To(BeNil())
+			handler.ServeHTTP(res, req)
+		})
+
+		It("sets the TrackEventName in the environment", func() {
+			Expect(env.TrackEventName).To(Equal("Action Called"))
+		})
+
+		It("Responds with 200 OK", func() {
+			Expect(res.Code).To(Equal(http.StatusOK))
 		})
 	})
 })

@@ -11,7 +11,9 @@ import (
 	"github.com/nitrous-io/nitrous/models/host"
 	"github.com/nitrous-io/nitrous/models/token"
 	"github.com/nitrous-io/nitrous/models/user"
+	"github.com/nitrous-io/nitrous/pkg/analytics"
 	"github.com/nitrous-io/nitrous/pkg/httperror"
+	"github.com/nitrous-io/nitrous/pkg/mergemap"
 	"github.com/nitrous-io/nitrous/pkg/pubsub"
 )
 
@@ -22,13 +24,25 @@ var (
 )
 
 type Env struct {
-	Root   string
-	Logger *logger.Logger
-	DB     *db.Database
-	Events *pubsub.Pubsub
-	Status int
-	User   *user.User
-	Data   map[string]interface{}
+	Root           string
+	Logger         *logger.Logger
+	DB             *db.Database
+	Events         *pubsub.Pubsub
+	Status         int
+	User           *user.User
+	Data           map[string]interface{}
+	TrackEventName string
+	trackEventData map[string]interface{}
+	RemoteAddr     string
+	Tracker        analytics.Tracker
+}
+
+func (env *Env) AddEventData(data map[string]interface{}) {
+	if env.trackEventData == nil {
+		env.trackEventData = map[string]interface{}{}
+	}
+
+	mergemap.Merge(data, env.trackEventData)
 }
 
 type Middleware func(env *Env, w http.ResponseWriter, r *http.Request) error
@@ -71,6 +85,25 @@ func Auth(mw Middleware) Middleware {
 
 		tok := authHeader[len(prefix):]
 		return authenticate(tok, mw, env, w, r)
+	}
+}
+
+func Track(event string, mw Middleware) Middleware {
+	return func(env *Env, w http.ResponseWriter, r *http.Request) error {
+		env.TrackEventName = event
+		if err := mw(env, w, r); err != nil {
+			return err
+		}
+
+		if env.RemoteAddr != "" {
+			env.trackEventData["$ip"] = env.RemoteAddr
+		}
+
+		if env.TrackEventName != "" {
+			env.Tracker.TrackEvent(event, env.User, env.trackEventData, env.Logger)
+		}
+
+		return nil
 	}
 }
 

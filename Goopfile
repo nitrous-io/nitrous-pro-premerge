@@ -4,6 +4,7 @@ github.com/gorilla/websocket #f940e88c0e4f2f58de44dc1788e05784b91332dd
 github.com/nitrous-io/nitrous-common #6c62cee74c19ade828a5b2470497725c661595fc !git@github.com:nitrous-io/nitrous-common
 github.com/nitrous-io/freighter/freighterclient #af18305e5d2fa355930a28bf8005e560f44fe78b !git@github.com:nitrous-io/freighter
 github.com/nitrous-io/hostbuilder #13ce06cc3fefc1ec2ba0811040bcc7a14b1db816 !git@github.com:nitrous-io/hostbuilder
+github.com/nitrous-io/go-mixpanel #5258575f8e3a6aee706c7f62e9ff05548fefaf7a
 bitbucket.org/kardianos/osext #6836bbd915dac0c3115ca7febb32af9ce74eb1d6
 github.com/lib/pq #ae7391529ced9c12f06bf01eae33dadb4c70e49f
 github.com/onsi/ginkgo/ginkgo #12446bbcc74950944c897e32ea99cc8d058f9c92

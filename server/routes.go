@@ -19,6 +19,7 @@ import (
 	"github.com/nitrous-io/nitrous/controllers/users"
 	"github.com/nitrous-io/nitrous/controllers/volumes"
 	mw "github.com/nitrous-io/nitrous/middleware"
+	"github.com/nitrous-io/nitrous/pkg/analytics"
 )
 
 func (s *Server) drawRoutes() {
@@ -32,13 +33,13 @@ func (s *Server) drawRoutes() {
 	s.namespace("/api/v0", func() {
 		s.route("/events", mw.AuthQS(events.Stream), "GET")
 
-		s.routeJSON("/oauth/token", tokens.Post, "POST")
-		s.routeJSON("/users", users.Create, "POST")
+		s.routeJSON("/oauth/token", mw.Track(analytics.UserSignedIn, tokens.Post), "POST")
+		s.routeJSON("/users", mw.Track(analytics.UserSignedUp, users.Create), "POST")
 		s.routeJSON("/users", mw.Auth(users.Update), "PUT")
 		s.routeJSON("/user", mw.Auth(users.GetAuthenticatedUser), "GET")
 
 		s.routeJSON("/hosts", mw.Auth(hosts.Index), "GET")
-		s.routeJSON("/hosts", mw.Auth(hosts.Create), "POST")
+		s.routeJSON("/hosts", mw.Auth(mw.Track(analytics.HostCreated, hosts.Create)), "POST")
 		s.routeJSON("/hosts/{slug}", mw.Auth(mw.HostViaPath("slug", hosts.Show)), "GET")
 		s.routeJSON("/hosts/{slug}/stats", mw.Auth(mw.HostViaPath("slug", hosts.Stats)), "GET")
 		s.routeJSON("/hosts/{slug}", mw.Auth(mw.HostViaPath("slug", hosts.Update)), "PUT")
@@ -69,7 +70,7 @@ func (s *Server) drawRoutes() {
 		s.routeJSON("/hosts/{slug}/images/{image:.*}", mw.Auth(mw.HostViaPath("slug", images.Inspect)), "GET")
 
 		s.routeJSON("/containers", mw.Auth(containers.Index), "GET")
-		s.routeJSON("/containers", mw.Auth(containers.Create), "POST")
+		s.routeJSON("/containers", mw.Track(analytics.ContainerCreated, mw.Auth(containers.Create)), "POST")
 		s.routeJSON("/containers/{slug}", mw.Auth(containers.Show), "GET")
 		s.routeJSON("/containers/{slug}/commit", mw.Auth(containers.Commit), "POST")
 		s.routeJSON("/containers/{slug}/config", mw.Auth(containers.Config), "GET")
@@ -78,7 +79,7 @@ func (s *Server) drawRoutes() {
 		s.routeJSON("/containers/{slug}/restart", mw.Auth(containers.Restart), "POST")
 		s.routeJSON("/containers/{slug}/reconfig", mw.Auth(containers.Reconfig), "POST")
 		s.routeJSON("/containers/{slug}", mw.Auth(containers.Destroy), "DELETE")
-		s.routeJSON("/containers/{slug}/token", mw.Auth(containers.Token), "POST")
+		s.routeJSON("/containers/{slug}/token", mw.Track(analytics.ContainerAccessed, mw.Auth(containers.Token)), "POST")
 
 		s.routeJSON("/containers/{slug}/keys", mw.Auth(keys.Index), "GET")
 		s.routeJSON("/containers/{slug}/keys", mw.Auth(keys.Create), "POST")

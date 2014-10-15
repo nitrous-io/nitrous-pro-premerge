@@ -84,6 +84,9 @@ func Create(env *middleware.Env, w http.ResponseWriter, r *http.Request) error {
 	env.Data = map[string]interface{}{
 		"user": serializers.SerializeUser(u),
 	}
+	env.User = u
+
+	env.Tracker.CreateProfile(u, env.Logger)
 	return nil
 }
 

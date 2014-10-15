@@ -14,6 +14,7 @@ import (
 	"github.com/nitrous-io/nitrous/db"
 	"github.com/nitrous-io/nitrous/models/token"
 	"github.com/nitrous-io/nitrous/models/user"
+	"github.com/nitrous-io/nitrous/pkg/analytics"
 	"github.com/nitrous-io/nitrous/pkg/bcrypt"
 	"github.com/nitrous-io/nitrous/serializers"
 	"github.com/nitrous-io/nitrous/server"
@@ -45,7 +46,7 @@ var _ = Describe("controllers/users", func() {
 		db, err = TestDatabase("nitrous_test")
 		Expect(err).To(BeNil())
 		logger := &logger.Logger{Level: logger.LogLevelQuiet}
-		svr = server.NewServer("", db, logger)
+		svr = NewTestServer("", db, logger, NewFakeTracker())
 		handler = svr.Router()
 		res = httptest.NewRecorder()
 		authTokenInputs = AuthTokenInputs{Handler: handler}
@@ -118,6 +119,22 @@ var _ = Describe("controllers/users", func() {
 				Expect(j.User.Username).To(Equal("foo"))
 				Expect(j.User.Email).To(Equal("foo@example.com"))
 			})
+
+			It("tracks the 'User Signed Up' event", func() {
+				u, err := user.FindByUsername(db, "foo")
+				Expect(err).To(BeNil())
+				t, ok := svr.Tracker.(*FakeTracker)
+				Expect(ok).To(BeTrue())
+				Expect(t.Events[u.ID]).To(Equal([]string{analytics.UserSignedUp}))
+			})
+
+			It("tracks the user as a new analytics profile", func() {
+				u, err := user.FindByUsername(db, "foo")
+				Expect(err).To(BeNil())
+				t, ok := svr.Tracker.(*FakeTracker)
+				Expect(ok).To(BeTrue())
+				Expect(t.ProfileCreated.ID).To(Equal(u.ID))
+			})
 		})
 
 		for _, v := range []string{"email", "username", "password", "code"} {
@@ -140,6 +157,12 @@ var _ = Describe("controllers/users", func() {
 					Expect(j["error"]).To(Equal("validation_failed"))
 					Expect(j["error_description"]).To(Equal(v + " can't be blank"))
 				})
+
+				It("shouldn't do any event tracking", func() {
+					t, ok := svr.Tracker.(*FakeTracker)
+					Expect(ok).To(BeTrue())
+					Expect(t.Events[u.ID]).To(BeEmpty())
+				})
 			})
 		}
 
@@ -161,6 +184,12 @@ var _ = Describe("controllers/users", func() {
 				Expect(j["error"]).To(Equal("validation_failed"))
 				Expect(j["error_description"]).To(Equal("email is not valid"))
 			})
+
+			It("shouldn't do any event tracking", func() {
+				t, ok := svr.Tracker.(*FakeTracker)
+				Expect(ok).To(BeTrue())
+				Expect(t.Events[u.ID]).To(BeEmpty())
+			})
 		})
 
 		Context("when an incorrect sign up code is given", func() {
@@ -180,6 +209,12 @@ var _ = Describe("controllers/users", func() {
 				Expect(err).To(BeNil())
 				Expect(j["error"]).To(Equal("validation_failed"))
 				Expect(j["error_description"]).To(Equal("code is incorrect"))
+			})
+
+			It("shouldn't do any event tracking", func() {
+				t, ok := svr.Tracker.(*FakeTracker)
+				Expect(ok).To(BeTrue())
+				Expect(t.Events[u.ID]).To(BeEmpty())
 			})
 		})
 
