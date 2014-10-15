@@ -1505,11 +1505,13 @@ var _ = Describe("controllers/containers", func() {
 			Expect(res.Code).To(Equal(http.StatusOK))
 			Expect(mockClient.ConfigCalled).To(Equal(1))
 			var j struct {
-				Config *freighterclient.ContainerConfig `json:"config"`
+				Config *serializers.ContainerConfig `json:"config"`
 			}
 			err := json.NewDecoder(res.Body).Decode(&j)
 			Expect(err).To(BeNil())
-			Expect(j.Config).To(Equal(mockClient.ConfigContainerConfig))
+			Expect(j.Config.Cmd).To(Equal(mockClient.ConfigContainerConfig.Cmd))
+			Expect(j.Config.Env).To(Equal(mockClient.ConfigContainerConfig.Env))
+			Expect(j.Config.Ports).To(Equal(mockClient.ConfigContainerConfig.PortBindings))
 		})
 
 		It("responds with 404 if container is not present", func() {

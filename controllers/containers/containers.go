@@ -350,7 +350,7 @@ func config(cn *container.Container, h *host.Host, env *middleware.Env, w http.R
 	}
 	env.Status = http.StatusOK
 	env.Data = map[string]interface{}{
-		"config": config,
+		"config": serializers.SerializeContainerConfig(config),
 	}
 
 	return nil

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/nitrous-io/freighter/freighterclient"
+
 	"github.com/nitrous-io/nitrous/models/container"
 	"github.com/nitrous-io/nitrous/serializers"
 	. "github.com/onsi/ginkgo"
@@ -69,5 +71,27 @@ var _ = Describe("container serializer", func() {
 				"updated_at": "2013-11-02T00:00:00Z"
 			}`, model.ResolvedState())))
 		})
+	})
+})
+
+var _ = Describe("container config serializer", func() {
+	It("serializes to JSON", func() {
+		fconfig := &freighterclient.ContainerConfig{
+			PortBindings: []string{"public:4040:5050", "private:4000:3000"},
+			Env:          []string{"NITROUS_IMAGE_VERSION=1.2.3", "PAGER=less"},
+			Cmd:          []string{"/bin/yes"},
+			Mounts:       []string{"db"},
+			PublishAll:   true,
+		}
+		c := serializers.SerializeContainerConfig(fconfig)
+		j, err := json.Marshal(c)
+		Expect(err).To(BeNil())
+		Expect(j).To(MatchJSON(fmt.Sprintf(`{
+			"port": ["public:4040:5050", "private:4000:3000"],
+			"env": ["NITROUS_IMAGE_VERSION=1.2.3", "PAGER=less"],
+			"cmd": ["/bin/yes"],
+			"volume": ["db"],
+			"publish_all": true
+		}`)))
 	})
 })

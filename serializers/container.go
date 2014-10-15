@@ -3,6 +3,7 @@ package serializers
 import (
 	"time"
 
+	"github.com/nitrous-io/freighter/freighterclient"
 	"github.com/nitrous-io/nitrous/models/container"
 )
 
@@ -48,5 +49,23 @@ func SerializeContainer(c *container.Container) *Container {
 		CreatedAt:    c.CreatedAt,
 		UpdatedAt:    c.UpdatedAt,
 		TerminatedAt: c.TerminatedAt,
+	}
+}
+
+type ContainerConfig struct {
+	Cmd        []string `json:"cmd"`
+	Env        []string `json:"env"`
+	Ports      []string `json:"port"`
+	Mounts     []string `json:"volume"`
+	PublishAll bool     `json:"publish_all"`
+}
+
+func SerializeContainerConfig(cfg *freighterclient.ContainerConfig) *ContainerConfig {
+	return &ContainerConfig{
+		Cmd:        cfg.Cmd,
+		Env:        cfg.Env,
+		Ports:      cfg.PortBindings,
+		Mounts:     cfg.Mounts,
+		PublishAll: cfg.PublishAll,
 	}
 }
