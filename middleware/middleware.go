@@ -96,7 +96,7 @@ func Track(event string, mw Middleware) Middleware {
 		}
 
 		if env.RemoteAddr != "" {
-			env.trackEventData["$ip"] = env.RemoteAddr
+			env.AddEventData(map[string]interface{}{"$ip": env.RemoteAddr})
 		}
 
 		if env.TrackEventName != "" {

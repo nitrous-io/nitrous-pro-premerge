@@ -193,10 +193,23 @@ var _ = Describe("middleware", func() {
 
 	Describe("event tracking middleware", func() {
 		var (
+			u  *user.User
 			mw func(event string, mw middleware.Middleware) middleware.Middleware
 		)
 
 		BeforeEach(func() {
+			u = &user.User{
+				Username: "foo",
+				Password: "123456",
+				Email:    "foo@example.com",
+			}
+			err := WrapInTransaction(db, u.Insert)
+			Expect(err).To(BeNil())
+			Expect(u.ID).NotTo(BeZero())
+			env.User = u
+
+			env.RemoteAddr = "192.168.1.1"
+
 			mw = middleware.Track
 			h := func(w http.ResponseWriter, r *http.Request) {
 				err := middleware.Track("Action Called", emptyMw)(env, w, r)
@@ -213,6 +226,11 @@ var _ = Describe("middleware", func() {
 
 		It("sets the TrackEventName in the environment", func() {
 			Expect(env.TrackEventName).To(Equal("Action Called"))
+		})
+
+		It("adds $ip to event data", func() {
+			t := env.Tracker.(*FakeTracker)
+			Expect(t.TrackEventProperties[u.ID][0]["$ip"]).To(Equal("192.168.1.1"))
 		})
 
 		It("Responds with 200 OK", func() {
