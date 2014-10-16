@@ -1494,29 +1494,10 @@ var _ = Describe("controllers/containers", func() {
 		}
 
 		It("responds with the various configs", func() {
-			mockClient.ConfigContainerConfig = &freighterclient.DockerConfig{
-				PortSpecs:    []string{"4040:5050", "4000:3000"},
-				ExposedPorts: map[string]struct{}{"22/tcp": struct{}{}},
+			mockClient.ConfigContainerConfig = &freighterclient.ContainerConfig{
+				PortBindings: []string{"4040:5050", "4000:3000"},
 				Env:          []string{"NITROUS_IMAGE_VERSION=1.2.3", "PAGER=less"},
 				Cmd:          []string{"/bin/yes"},
-				Image:        "1234567",
-				Volumes:      map[string]struct{}{"/shared": struct{}{}},
-			}
-			mockClient.ConfigContainerHostConfig = &freighterclient.DockerHostConfig{
-				Binds: []string{"/shared:/var/lib/freighter/volumes/shared"},
-				PortBindings: map[string][]freighterclient.PortBinding{
-					"22/tcp": []freighterclient.PortBinding{
-						{HostIp: "0.0.0.0", HostPort: "4040"},
-					},
-				},
-				PublishAllPorts: true,
-			}
-			mockClient.ConfigImageConfig = &freighterclient.DockerConfig{
-				PortSpecs:    []string{"4040:5050"},
-				ExposedPorts: map[string]struct{}{"22/tcp": struct{}{}},
-				Env:          []string{"NITROUS_IMAGE_VERSION=1.2.3"},
-				Image:        "1234567",
-				Volumes:      map[string]struct{}{"/shared": struct{}{}},
 			}
 
 			doRequest(c.Slug)
@@ -1524,14 +1505,13 @@ var _ = Describe("controllers/containers", func() {
 			Expect(res.Code).To(Equal(http.StatusOK))
 			Expect(mockClient.ConfigCalled).To(Equal(1))
 			var j struct {
-				Config      *freighterclient.DockerConfig     `json:"config"`
-				HostConfig  *freighterclient.DockerHostConfig `json:"host_config"`
-				ImageConfig *freighterclient.DockerConfig     `json:"image_config"`
+				Config *serializers.ContainerConfig `json:"config"`
 			}
 			err := json.NewDecoder(res.Body).Decode(&j)
 			Expect(err).To(BeNil())
-			Expect(j.Config).To(Equal(mockClient.ConfigContainerConfig))
-			Expect(j.HostConfig).To(Equal(mockClient.ConfigContainerHostConfig))
+			Expect(j.Config.Cmd).To(Equal(mockClient.ConfigContainerConfig.Cmd))
+			Expect(j.Config.Env).To(Equal(mockClient.ConfigContainerConfig.Env))
+			Expect(j.Config.Ports).To(Equal(mockClient.ConfigContainerConfig.PortBindings))
 		})
 
 		It("responds with 404 if container is not present", func() {
