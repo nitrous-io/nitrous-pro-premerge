@@ -25,30 +25,20 @@ form submit='create target="view"'
         | Create from:
 
       .option-selection
-        /ul.ui.checkbox-group
-          /li
-            /.ui.checkbox
-              /input type='radio' id='images-new-option-github' name='option'
-              /label
-            /label for='images-new-option-github' Use Dockerfile in GitHub Repo / Gist
+        ul.ui.checkbox-group
+          li
+            .ui.checkbox
+              input type='radio' id='images-new-option-remote' name='option' checked='checked' disabled={saving} value='remote'
+              label
+            label for='images-new-option-remote' Enter Remote URL
 
-        /.indent
-          /input type='text' id='images-new-github' name='github'
-
-        /ul.ui.checkbox-group
-          /li
-            /.ui.checkbox
-              /input type='radio' id='images-new-option-url' name='option'
-              /label
-            /label for='images-new-option-url' Fetch Dockerfile URL
-
-        /.indent
-          /input type='text' id='images-new-url' name='url'
+        .indent
+          = input type='text' id='images-new-remote-url' name='remote-url' value=remoteURL placeholder='github.com/yourname/repo'
 
         ul.ui.checkbox-group class={saving:disabled}
           li
             .ui.checkbox
-              input type='radio' id='images-new-option-file' name='option' checked='checked' disabled={saving} value='file'
+              input type='radio' id='images-new-option-file' name='option' disabled={saving} value='file'
               label
             label for='images-new-option-file' Upload Dockerfile Tarball
 

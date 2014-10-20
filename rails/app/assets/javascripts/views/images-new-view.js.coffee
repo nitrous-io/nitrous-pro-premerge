@@ -14,11 +14,12 @@ App.ImagesNewView = Em.View.extend
   createButtonDisabled: (->
     !(
       @get('controller.name') && @get('controller.slug') && @get('controller.selectedHostSlug') && (
+        (@get('selectedOption') == 'remote' && @get('controller.remoteURL')) ||
         (@get('selectedOption') == 'file' && @get('selectedFile')) ||
         (@get('selectedOption') == 'code' && @get('dockerfileCode'))
       )
     )
-  ).property 'controller.name', 'controller.slug', 'controller.selectedHostSlug', 'selectedOption', 'selectedFile', 'dockerfileCode'
+  ).property 'controller.name', 'controller.slug', 'controller.selectedHostSlug', 'selectedOption', 'selectedFile', 'dockerfileCode', 'controller.remoteURL'
 
   hideProgress: Em.computed.not('controller.saving')
   indeterminateProgress: Em.computed.none('controller.image.progress.progressDetail.start')
