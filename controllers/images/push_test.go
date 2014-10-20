@@ -87,7 +87,7 @@ var _ = Describe("controllers/images", func() {
 
 			res := ctx.doPush(svr, "foo", "scratchy:latest", &url.Values{"repository": []string{"nitrousio/devenv"}})
 			errType, _ := ErrorSlug(res.Body)
-			Expect(errType).To(Equal("not_found"))
+			Expect(errType).To(Equal("image_not_found"))
 			Expect(fs.pushCalled).To(BeFalse())
 		})
 

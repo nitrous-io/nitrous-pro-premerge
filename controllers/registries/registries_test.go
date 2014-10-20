@@ -69,7 +69,7 @@ var _ = Describe("controllers/registries", func() {
 			err, j := unmarshalErrorResponse()
 			Expect(err).To(BeNil())
 
-			Expect(j.Error).To(Equal("not_found"))
+			Expect(j.Error).To(Equal("host_not_found"))
 			Expect(j.ErrorDescription).To(Equal("host does not exist"))
 		})
 	}

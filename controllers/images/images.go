@@ -25,7 +25,7 @@ var (
 	errTagRequired      = httperror.New(http.StatusBadRequest, "invalid_request", "tag is required")
 	errSlugRequired     = httperror.New(http.StatusBadRequest, "invalid_request", "slug is required")
 	errImageInUse       = httperror.New(http.StatusBadRequest, "invalid_request", "image is being used by one or more containers")
-	errImageMissing     = httperror.New(http.StatusNotFound, "not_found", "image does not exist")
+	errImageMissing     = httperror.New(http.StatusNotFound, "image_not_found", "image does not exist")
 	errFileRequired     = httperror.New(http.StatusBadRequest, "invalid_request", "an archive or a plain file is required")
 	errImageAuthFailed  = httperror.New(http.StatusBadRequest, "invalid_request", "you do not have access to this image")
 

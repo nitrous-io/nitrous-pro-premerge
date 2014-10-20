@@ -18,11 +18,11 @@ import (
 
 var (
 	ErrContainerBlank        = httperror.New(http.StatusBadRequest, "validation_failed", "missing container id")
-	ErrContainerNotFound     = httperror.New(http.StatusNotFound, "not_found", "container does not exist")
+	ErrContainerNotFound     = httperror.New(http.StatusNotFound, "container_not_found", "container does not exist")
 	ErrInvalidKey            = httperror.New(http.StatusBadRequest, "validation_failed", "invalid key")
 	ErrKeyExists             = httperror.New(http.StatusBadRequest, "validation_failed", "key already exists")
 	ErrPubKeyOpsNotSupported = httperror.New(http.StatusBadRequest, "invalid_request", "public key operations not supported on this container")
-	ErrFingerprintNotFound   = httperror.New(http.StatusNotFound, "not_found", "fingerprint not found")
+	ErrFingerprintNotFound   = httperror.New(http.StatusNotFound, "fingerprint_not_found", "fingerprint not found")
 )
 
 var (

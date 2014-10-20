@@ -22,7 +22,7 @@ var (
 	errLoginFailed      = httperror.New(http.StatusBadRequest, "login_failed", "registry login failed")
 	errLogoutFailed     = httperror.New(http.StatusBadRequest, "logout_failed", "registry logout failed")
 	errAlreadyLoggedIn  = httperror.New(http.StatusBadRequest, "login_failed", "already logged in to this registry")
-	errRegistryNotFound = httperror.New(http.StatusNotFound, "not_found", "registry does not exist")
+	errRegistryNotFound = httperror.New(http.StatusNotFound, "registry_not_found", "registry does not exist")
 )
 
 var (

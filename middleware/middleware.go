@@ -20,7 +20,7 @@ import (
 var (
 	errInvalidRequest = httperror.New(http.StatusBadRequest, "invalid_request", "auth token is required")
 	errInvalidToken   = httperror.New(http.StatusUnauthorized, "invalid_token", "auth token is invalid")
-	ErrHostNotFound   = httperror.New(http.StatusNotFound, "not_found", "host does not exist")
+	ErrHostNotFound   = httperror.New(http.StatusNotFound, "host_not_found", "host does not exist")
 )
 
 type Env struct {

@@ -145,7 +145,7 @@ var _ = Describe("controllers/containers", func() {
 				Expect(err).To(BeNil())
 
 				errType, _ := j["error"].(string)
-				Expect(errType).To(Equal("not_found"))
+				Expect(errType).To(Equal("container_not_found"))
 				errDesc, _ := j["error_description"].(string)
 				Expect(errDesc).To(Equal("container does not exist"))
 			})
@@ -613,7 +613,7 @@ var _ = Describe("controllers/containers", func() {
 				Expect(err).To(BeNil())
 
 				errType, _ := j["error"].(string)
-				Expect(errType).To(Equal("not_found"))
+				Expect(errType).To(Equal("host_not_found"))
 
 				errDesc, _ := j["error_description"].(string)
 				Expect(errDesc).To(Equal("host does not exist"))
@@ -828,7 +828,7 @@ var _ = Describe("controllers/containers", func() {
 
 					Expect(res.Code).To(Equal(http.StatusNotFound))
 					errType, errDesc := ErrorSlug(res.Body)
-					Expect(errType).To(Equal("not_found"))
+					Expect(errType).To(Equal("image_not_found"))
 					Expect(errDesc).To(Equal("image does not exist"))
 				})
 			})
