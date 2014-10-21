@@ -41,6 +41,14 @@ App.ContainersNewView = Em.View.extend
     !(@get('controller.envKey') && @get('controller.envValue'))
   ).property 'controller.envKey', 'controller.envValue'
 
+  privilegedModeDisabled: (->
+    return false unless @get('selectedOption') == 'base-image'
+    if image = App.get('baseImages')?.findBy('repo', @get('selectedBaseImage'))
+      if image.get('privilegedMode')
+        @set('controller.privileged', true)
+        true
+  ).property 'selectedOption', 'selectedBaseImage'
+
   hideProgress: Em.computed.not('controller.saving')
   indeterminateProgress: Em.computed.none('controller.image.progress.progressDetail.start')
 
@@ -110,6 +118,10 @@ App.ContainersNewView = Em.View.extend
       return if @get 'controller.saving'
       ui.showModal('#env-vars-dialog')
 
+    openExperimental: ->
+      return if @get 'controller.saving'
+      ui.showModal('#experimental-dialog')
+
     closeVolumeMounts: ->
       ui.hideModal('#volume-mounts-dialog')
 
@@ -118,6 +130,9 @@ App.ContainersNewView = Em.View.extend
 
     closeEnvVars: ->
       ui.hideModal('#env-vars-dialog')
+
+    closeExperimental: ->
+      ui.hideModal('#experimental-dialog')
 
     create: ->
       @get('controller').send 'create', @get('image')

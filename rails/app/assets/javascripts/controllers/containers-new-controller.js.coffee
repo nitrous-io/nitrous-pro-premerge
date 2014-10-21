@@ -15,6 +15,7 @@ App.ContainersNewController = Em.Controller.extend
   publicPort: false
   hostPort: null
   containerPort: null
+  privileged: false
   publishAll: true
 
   envVarHash: null
@@ -39,6 +40,7 @@ App.ContainersNewController = Em.Controller.extend
       publicPort: false
       hostPort: null
       containerPort: null
+      privileged: false
       publishAll: true
 
       envVarHash: Em.Object.create()
@@ -173,7 +175,14 @@ App.ContainersNewController = Em.Controller.extend
             slug: slug
             image: repository
 
-          container.save(host: @get('selectedHostSlug'), volume: @get('volumeMounts'), env: @get('envVars'), port: @get('portBindings'), publish_all: @get('publishAll')).then =>
+          container.save(
+            host: @get('selectedHostSlug'),
+            volume: @get('volumeMounts'),
+            env: @get('envVars'),
+            port: @get('portBindings'),
+            privileged: @get('privileged'),
+            publish_all: @get('publishAll')
+          ).then =>
             @transitionToRoute 'container.index', slug
             App.snackbar.post("Your container “#{name}” was created successfully.")
             @set 'saving', false

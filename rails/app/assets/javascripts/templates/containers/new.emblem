@@ -81,6 +81,8 @@ form submit='create target="view"'
             |&nbsp;(
             = envVars.length
             |)
+        a.ui.btn.raised class={saving:disabled} href='#' click='openExperimental target="view"'
+          | Experimental
 
   .card-footer.bordered
     if saving
@@ -200,3 +202,25 @@ form submit='create target="view"'
       .card-footer
         .right
           button.ui.btn.primary click='closeEnvVars target="view"' Done
+
+#experimental-dialog.ui.modal.container-config
+  .ui.card
+    h2.card-header
+      | Experimental Settings
+    form
+      .card-body
+        ul.ui.checkbox-group class={view.privilegedModeDisabled:disabled}
+          li
+            if view.privilegedModeDisabled
+              .ui.checkbox
+                = input type='checkbox' id='containers-new-privileged' checked='checked' disabled='disabled'
+                label
+              label for='containers-new-privileged' Privileged mode (required)
+            else
+              .ui.checkbox
+                = input type='checkbox' id='containers-new-privileged' checked=privileged
+                label
+              label for='containers-new-privileged' Privileged mode
+    .card-footer
+      .right
+        button.ui.btn.primary click='closeExperimental target="view"' Done
